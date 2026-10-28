@@ -1074,6 +1074,7 @@ function drawCloud(c) {
 
 let bgLast = 0;
 function drawBackground(t) {
+  if (!bgW || !bgH) return;
   const dt = bgLast ? Math.min(t - bgLast, 0.5) : 0;
   bgLast = t;
   bgCtx.drawImage(bgSky, 0, 0);
@@ -1113,8 +1114,16 @@ function drawBackground(t) {
 }
 
 let bgFrame = 0;
+/* Окно могло иметь нулевой размер при загрузке (например, вкладка открыта в фоне) или изменить его
+   без события resize — тогда фон перестраивается под текущий размер */
+const bgSizeOk = () => bgW === Math.ceil(innerWidth / BG_PX) && bgH === Math.ceil(innerHeight / BG_PX);
+
 function bgLoop(ts) {
-  if (ts - bgFrame > 100) { drawBackground(ts / 1000); bgFrame = ts; }
+  if (ts - bgFrame > 100) {
+    if (!bgSizeOk() && innerWidth > 0 && innerHeight > 0) buildBackground();
+    if (bgW > 0 && bgH > 0) drawBackground(ts / 1000);
+    bgFrame = ts;
+  }
   requestAnimationFrame(bgLoop);
 }
 let bgResize;
