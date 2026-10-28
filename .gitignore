@@ -1,0 +1,7 @@
+# Личные конспекты Obsidian — не публикуются
+GameChain Obsidian/
+# Данные, которые создаёт консольная версия при работе
+gamechain_data.json
+# Служебные файлы
+.DS_Store
+__pycache__/

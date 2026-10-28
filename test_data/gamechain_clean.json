@@ -1,0 +1,468 @@
+{
+  "users": {
+    "alice": {
+      "username": "alice",
+      "nickname": "Alice_Knight",
+      "email": "alice@mail.ru",
+      "salt": "901df24547925a69",
+      "password_hash": "d34cdd631a9caa8dc973aa536ffd3a7f7205daddd5228a3027453dd84829ee78",
+      "level": 5,
+      "gold": 340,
+      "items": [
+        "Зелье здоровья",
+        "Зелье здоровья",
+        "Меч дракона",
+        "Рубин"
+      ]
+    },
+    "bob": {
+      "username": "bob",
+      "nickname": "BobTheMage",
+      "email": "bob.mage@mail.ru",
+      "salt": "751cf7d5fc97dae2",
+      "password_hash": "fd537d74feb58696d38021515b7da9ebbc8ce03fc0fd51e21186c34d4e56a684",
+      "level": 4,
+      "gold": 100,
+      "items": [
+        "Посох огня"
+      ]
+    },
+    "charlie": {
+      "username": "charlie",
+      "nickname": "Charlie_Rogue",
+      "email": "charlie@mail.ru",
+      "salt": "edadff78711687d4",
+      "password_hash": "db1697daf5f974f4ae825e9798c35cf36b4063540d7ac87ae8eff137ce112235",
+      "level": 3,
+      "gold": 120,
+      "items": [
+        "Медная кирка",
+        "Изумруд",
+        "Медный меч"
+      ]
+    },
+    "diana": {
+      "username": "diana",
+      "nickname": "Diana_Hunter",
+      "email": "diana@mail.ru",
+      "salt": "e22bd75300dc0b8c",
+      "password_hash": "9856b69bfb32d63913b3a30ff4070d0d6676485e9fc61370463ba65bc1a44a1b",
+      "level": 6,
+      "gold": 100,
+      "items": [
+        "Деревянный щит",
+        "Ледяной клинок",
+        "Зелье маны"
+      ]
+    }
+  },
+  "blockchain": [
+    {
+      "index": 0,
+      "timestamp": "2026-10-28 04:18:58",
+      "operation": "GENESIS",
+      "data": {
+        "message": "GameChain genesis block"
+      },
+      "prev_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "nonce": 1272,
+      "hash": "0000256b9ad4bfe8822e0c5aece2de91bf4ae87c44165b09db6c33e5e4f52d49"
+    },
+    {
+      "index": 1,
+      "timestamp": "2026-10-28 04:18:58",
+      "operation": "REGISTER_USER",
+      "data": {
+        "username": "alice",
+        "user": {
+          "username": "alice",
+          "nickname": "Alice_Knight",
+          "email": "alice@mail.ru",
+          "salt": "901df24547925a69",
+          "password_hash": "d34cdd631a9caa8dc973aa536ffd3a7f7205daddd5228a3027453dd84829ee78",
+          "level": 1,
+          "gold": 100,
+          "items": []
+        },
+        "record_hash": "f1c7ef0fd22c7fe89f716e4a4beea4276dcbf4d9576767f26a3611adba28434a"
+      },
+      "prev_hash": "0000256b9ad4bfe8822e0c5aece2de91bf4ae87c44165b09db6c33e5e4f52d49",
+      "nonce": 5876,
+      "hash": "00006f6ba6dc5f3143ac34ecfd142a3877bb707597b12baeba95facc23ce2350"
+    },
+    {
+      "index": 2,
+      "timestamp": "2026-10-28 04:18:58",
+      "operation": "REGISTER_USER",
+      "data": {
+        "username": "bob",
+        "user": {
+          "username": "bob",
+          "nickname": "BobTheMage",
+          "email": "bob@mail.ru",
+          "salt": "751cf7d5fc97dae2",
+          "password_hash": "fd537d74feb58696d38021515b7da9ebbc8ce03fc0fd51e21186c34d4e56a684",
+          "level": 1,
+          "gold": 100,
+          "items": []
+        },
+        "record_hash": "be54add02e55a6e02fb8f3de6576cff197e7fa79e8299a4de63d12a7f9f452ec"
+      },
+      "prev_hash": "00006f6ba6dc5f3143ac34ecfd142a3877bb707597b12baeba95facc23ce2350",
+      "nonce": 117118,
+      "hash": "00006e166e3f09be275c4bb5dceed4de861004166a0ee32119f49304abf8beb5"
+    },
+    {
+      "index": 3,
+      "timestamp": "2026-10-28 04:18:59",
+      "operation": "REGISTER_USER",
+      "data": {
+        "username": "charlie",
+        "user": {
+          "username": "charlie",
+          "nickname": "Charlie_Rogue",
+          "email": "charlie@mail.ru",
+          "salt": "edadff78711687d4",
+          "password_hash": "db1697daf5f974f4ae825e9798c35cf36b4063540d7ac87ae8eff137ce112235",
+          "level": 1,
+          "gold": 100,
+          "items": []
+        },
+        "record_hash": "b1fd0cc5b1ae287e4157a8c5a6da3ed6e3755d2bcb9c911da66021f74dd4f0be"
+      },
+      "prev_hash": "00006e166e3f09be275c4bb5dceed4de861004166a0ee32119f49304abf8beb5",
+      "nonce": 92399,
+      "hash": "00008b8419da3fe1d6a2e343c7881190950bc41a2c56a8505452fb0e5975b4db"
+    },
+    {
+      "index": 4,
+      "timestamp": "2026-10-28 04:19:00",
+      "operation": "REGISTER_USER",
+      "data": {
+        "username": "diana",
+        "user": {
+          "username": "diana",
+          "nickname": "Diana_Archer",
+          "email": "diana@mail.ru",
+          "salt": "e22bd75300dc0b8c",
+          "password_hash": "9856b69bfb32d63913b3a30ff4070d0d6676485e9fc61370463ba65bc1a44a1b",
+          "level": 1,
+          "gold": 100,
+          "items": []
+        },
+        "record_hash": "3add27ffdb951b5d9bf28e5efe938e2a70de0f0df88295a35b7e06fe8d9e84f1"
+      },
+      "prev_hash": "00008b8419da3fe1d6a2e343c7881190950bc41a2c56a8505452fb0e5975b4db",
+      "nonce": 81580,
+      "hash": "00002a0eabe8fee1948188c9cf8aecd6d44a9d6a64e46642483b0d15d4b7a69e"
+    },
+    {
+      "index": 5,
+      "timestamp": "2026-10-28 04:19:01",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "alice",
+        "item": "Медный меч",
+        "record_hash": "ba4bceadc4d9df01fdd56fb308c9a41a43a080f181ff280689bd76ca79fd6581"
+      },
+      "prev_hash": "00002a0eabe8fee1948188c9cf8aecd6d44a9d6a64e46642483b0d15d4b7a69e",
+      "nonce": 32331,
+      "hash": "0000a9091d11988ba9f9028e291726ea5e9477ba5bc4fd91c0040f0008ddfc81"
+    },
+    {
+      "index": 6,
+      "timestamp": "2026-10-28 04:19:01",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "bob",
+        "item": "Посох огня",
+        "record_hash": "c0252acfc7efcd5cb6e265fd322a894ef3925254736da445217bcb731a69f255"
+      },
+      "prev_hash": "0000a9091d11988ba9f9028e291726ea5e9477ba5bc4fd91c0040f0008ddfc81",
+      "nonce": 48922,
+      "hash": "0000f63c886b0aad125566443301e6989c29ff698c26d5f965143fefaf06b0f4"
+    },
+    {
+      "index": 7,
+      "timestamp": "2026-10-28 04:19:01",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "charlie",
+        "item": "Медная кирка",
+        "record_hash": "73696af3f76352ce84489fad5753b1307edf057866af46a48405754c279250b7"
+      },
+      "prev_hash": "0000f63c886b0aad125566443301e6989c29ff698c26d5f965143fefaf06b0f4",
+      "nonce": 33242,
+      "hash": "00007ef699d06fd3cc8d77fbbe088827b88ad0b5e9f0468024a6ea1e35b37a67"
+    },
+    {
+      "index": 8,
+      "timestamp": "2026-10-28 04:19:01",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "diana",
+        "item": "Деревянный щит",
+        "record_hash": "45dcb4c86eea09639d7ed393825468a0b528f4d47bda57337e10fcf5f38bf040"
+      },
+      "prev_hash": "00007ef699d06fd3cc8d77fbbe088827b88ad0b5e9f0468024a6ea1e35b37a67",
+      "nonce": 63360,
+      "hash": "0000ce32ac157ec189ac5bd6a8946b901e689d7330a74066591462b6516d06ac"
+    },
+    {
+      "index": 9,
+      "timestamp": "2026-10-28 04:19:02",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "alice",
+        "item": "Зелье здоровья",
+        "record_hash": "fadaf6f1e0c5f2b5d8ecd50ca131e20225d150c6b4be4e02bf7c609f9dd56187"
+      },
+      "prev_hash": "0000ce32ac157ec189ac5bd6a8946b901e689d7330a74066591462b6516d06ac",
+      "nonce": 223382,
+      "hash": "00000fabfa6e624b375895489981ad08a8bb2bb955bc59b04ea618fc9cba857f"
+    },
+    {
+      "index": 10,
+      "timestamp": "2026-10-28 04:19:03",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "alice",
+        "item": "Зелье здоровья",
+        "record_hash": "53a7c0431eb5012483fb5c944b9e8cee7cb23a0cbef31aa23a436cd58ee6ad71"
+      },
+      "prev_hash": "00000fabfa6e624b375895489981ad08a8bb2bb955bc59b04ea618fc9cba857f",
+      "nonce": 21344,
+      "hash": "0000fe7a233a93551c66dedd3ace34163426edd5cc011af9ee86b5a843084373"
+    },
+    {
+      "index": 11,
+      "timestamp": "2026-10-28 04:19:03",
+      "operation": "UPDATE_USER",
+      "data": {
+        "username": "alice",
+        "field": "level",
+        "old": 1,
+        "new": 5,
+        "record_hash": "c29f27a543cd2f420e4bd33ec308a56e331650f529df06833229228f4fca5833"
+      },
+      "prev_hash": "0000fe7a233a93551c66dedd3ace34163426edd5cc011af9ee86b5a843084373",
+      "nonce": 20003,
+      "hash": "00007b4345271169a32ddc5e04b92d22f54b67e71ae29902f295cb0cc9ba3488"
+    },
+    {
+      "index": 12,
+      "timestamp": "2026-10-28 04:19:03",
+      "operation": "UPDATE_USER",
+      "data": {
+        "username": "alice",
+        "field": "gold",
+        "old": 100,
+        "new": 340,
+        "record_hash": "7ae6c4aa0ee6d850946045455fc22b41f01d2ff0fd9ac6cbe1a9b0619b76cea8"
+      },
+      "prev_hash": "00007b4345271169a32ddc5e04b92d22f54b67e71ae29902f295cb0cc9ba3488",
+      "nonce": 128087,
+      "hash": "0000cd05d1c9e50d8734e922ef2d16987db9cf4667c183372af8570ce9d8f987"
+    },
+    {
+      "index": 13,
+      "timestamp": "2026-10-28 04:19:04",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "charlie",
+        "item": "Рубин",
+        "record_hash": "398888d4e8ca2a339c9464ffeb82158e79fbb4b661ce87a3d68428d7065bb9b8"
+      },
+      "prev_hash": "0000cd05d1c9e50d8734e922ef2d16987db9cf4667c183372af8570ce9d8f987",
+      "nonce": 32612,
+      "hash": "0000df4f3613c468683db7d58ce740b81e2153d758225dec7bfb5c7c247cc3c8"
+    },
+    {
+      "index": 14,
+      "timestamp": "2026-10-28 04:19:04",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "charlie",
+        "item": "Изумруд",
+        "record_hash": "93438ff6f450c73387a9f178e8953d59b65456acd4fd439d71f70f8a4124362d"
+      },
+      "prev_hash": "0000df4f3613c468683db7d58ce740b81e2153d758225dec7bfb5c7c247cc3c8",
+      "nonce": 185182,
+      "hash": "0000913c902490d1c27087cdac4b492efc14fb0a9430fbc3ddb6895e00ec44dc"
+    },
+    {
+      "index": 15,
+      "timestamp": "2026-10-28 04:19:06",
+      "operation": "UPDATE_USER",
+      "data": {
+        "username": "charlie",
+        "field": "level",
+        "old": 1,
+        "new": 3,
+        "record_hash": "09826f4b86d65e1259932c7435f708b94157475c5676778a02d3146d0d942830"
+      },
+      "prev_hash": "0000913c902490d1c27087cdac4b492efc14fb0a9430fbc3ddb6895e00ec44dc",
+      "nonce": 413989,
+      "hash": "0000b03c12c2d4b029730067c0477847692d9979d64c44431a5f4ca6bad0881f"
+    },
+    {
+      "index": 16,
+      "timestamp": "2026-10-28 04:19:08",
+      "operation": "UPDATE_USER",
+      "data": {
+        "username": "charlie",
+        "field": "gold",
+        "old": 100,
+        "new": 120,
+        "record_hash": "0401624e004dc2e23ff4799fb852e0dceacd978b3c528499daae000f842823d2"
+      },
+      "prev_hash": "0000b03c12c2d4b029730067c0477847692d9979d64c44431a5f4ca6bad0881f",
+      "nonce": 47216,
+      "hash": "00008fbc6a77762a7794a136b14290f8a9fb9849e4e1c10141d02331d51dd97d"
+    },
+    {
+      "index": 17,
+      "timestamp": "2026-10-28 04:19:09",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "bob",
+        "item": "Зелье маны",
+        "record_hash": "1ca95dfeba127996c0716b7d0236ed3a67398b635f8c277a7642bc14903a1149"
+      },
+      "prev_hash": "00008fbc6a77762a7794a136b14290f8a9fb9849e4e1c10141d02331d51dd97d",
+      "nonce": 17202,
+      "hash": "00006bc20d4dfd6a38d5e98eb49cde2e1e21b53c6cc878b771520dde3cd2caaa"
+    },
+    {
+      "index": 18,
+      "timestamp": "2026-10-28 04:19:09",
+      "operation": "UPDATE_USER",
+      "data": {
+        "username": "bob",
+        "field": "level",
+        "old": 1,
+        "new": 4,
+        "record_hash": "1e1be052d4f288e58d90448de5fbbb29970660928a0f1b715b27ca67cc2b1084"
+      },
+      "prev_hash": "00006bc20d4dfd6a38d5e98eb49cde2e1e21b53c6cc878b771520dde3cd2caaa",
+      "nonce": 9986,
+      "hash": "00009b02e5f6d8da71a46cf40e4a68808dc1c2ac07ff6bca0e4e14d6221bbd79"
+    },
+    {
+      "index": 19,
+      "timestamp": "2026-10-28 04:19:09",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "alice",
+        "item": "Меч дракона",
+        "record_hash": "bef579032e56dfcbcbb84de702ccec4300d135bbf85856624074bf0181856640"
+      },
+      "prev_hash": "00009b02e5f6d8da71a46cf40e4a68808dc1c2ac07ff6bca0e4e14d6221bbd79",
+      "nonce": 84096,
+      "hash": "000056ddba6806d9c11d659b9210e13189bc67fd114deef925cce39d25a1984c"
+    },
+    {
+      "index": 20,
+      "timestamp": "2026-10-28 04:19:09",
+      "operation": "TRANSFER_ITEM",
+      "data": {
+        "from": "charlie",
+        "to": "alice",
+        "item": "Рубин",
+        "from_hash": "69224dc902299cbdd9e5801f5c4407ae0d991b193bd419435fe3b9e95988596f",
+        "to_hash": "13feb3dffa3925798b266240badb157feb4e6187e7cce126c667ce43aff3e0bd"
+      },
+      "prev_hash": "000056ddba6806d9c11d659b9210e13189bc67fd114deef925cce39d25a1984c",
+      "nonce": 256482,
+      "hash": "000071b749a01e5e22b1096a4f99cba17f729f4e6c9edbb4aca2b59b61baf697"
+    },
+    {
+      "index": 21,
+      "timestamp": "2026-10-28 04:19:11",
+      "operation": "TRANSFER_ITEM",
+      "data": {
+        "from": "alice",
+        "to": "charlie",
+        "item": "Медный меч",
+        "from_hash": "c776126dd06c262069c725beef48e40a1432d534e808652862186a092289ff7b",
+        "to_hash": "c775fb6173e468f3e38f2c666589bc5e8600dff727ca9237b09402a18f064140"
+      },
+      "prev_hash": "000071b749a01e5e22b1096a4f99cba17f729f4e6c9edbb4aca2b59b61baf697",
+      "nonce": 39445,
+      "hash": "000060700363d3c2483af396b7154ececa9794fb76cedd1ba575f43856e9ca1f"
+    },
+    {
+      "index": 22,
+      "timestamp": "2026-10-28 04:19:12",
+      "operation": "ADD_ITEM",
+      "data": {
+        "username": "diana",
+        "item": "Ледяной клинок",
+        "record_hash": "6f25084f5bed529c174e4c7cbdafe481003e8ab5b51804096e15ae51031b44cb"
+      },
+      "prev_hash": "000060700363d3c2483af396b7154ececa9794fb76cedd1ba575f43856e9ca1f",
+      "nonce": 322566,
+      "hash": "0000d5ea9ae859001b95b7f5f0a4fa838185c34544e6822b1e3cbc4dba6590f5"
+    },
+    {
+      "index": 23,
+      "timestamp": "2026-10-28 04:19:14",
+      "operation": "TRANSFER_ITEM",
+      "data": {
+        "from": "bob",
+        "to": "diana",
+        "item": "Зелье маны",
+        "from_hash": "340598da08bfcfcc97a65fb177f9481784094e2ae7c49bfb7f3ebbf894c4aba0",
+        "to_hash": "1cac842160765a622fd888205e6612e280e7b63146f1f6c38bc15f88ff0fa654"
+      },
+      "prev_hash": "0000d5ea9ae859001b95b7f5f0a4fa838185c34544e6822b1e3cbc4dba6590f5",
+      "nonce": 92089,
+      "hash": "00005916c2d37566b2340b4c1c48131a5d28eb03ce0e37a5b70dbf15fb28fce2"
+    },
+    {
+      "index": 24,
+      "timestamp": "2026-10-28 04:19:15",
+      "operation": "UPDATE_USER",
+      "data": {
+        "username": "diana",
+        "field": "level",
+        "old": 1,
+        "new": 6,
+        "record_hash": "68593553c0953392b7467474dbc01a3cd6e1ccd28843ea3a7adc634008d85e25"
+      },
+      "prev_hash": "00005916c2d37566b2340b4c1c48131a5d28eb03ce0e37a5b70dbf15fb28fce2",
+      "nonce": 7030,
+      "hash": "0000783beaa8abf5532db199339d20f46ef159764355a695e6ad96b0c7002450"
+    },
+    {
+      "index": 25,
+      "timestamp": "2026-10-28 04:19:15",
+      "operation": "UPDATE_USER",
+      "data": {
+        "username": "bob",
+        "field": "email",
+        "old": "bob@mail.ru",
+        "new": "bob.mage@mail.ru",
+        "record_hash": "de45d6da9d106542cf4288a4cb179082f2c779d316b5939c95f4e597ac5d5b3e"
+      },
+      "prev_hash": "0000783beaa8abf5532db199339d20f46ef159764355a695e6ad96b0c7002450",
+      "nonce": 67377,
+      "hash": "0000634f04fbeed0cb498a59c10d7d910291dceb21634ede0a5fed2878511cd5"
+    },
+    {
+      "index": 26,
+      "timestamp": "2026-10-28 04:19:15",
+      "operation": "UPDATE_USER",
+      "data": {
+        "username": "diana",
+        "field": "nickname",
+        "old": "Diana_Archer",
+        "new": "Diana_Hunter",
+        "record_hash": "c783f5647fb7099c97aef61d811518426d52adb512e82f64297831be0b5aff31"
+      },
+      "prev_hash": "0000634f04fbeed0cb498a59c10d7d910291dceb21634ede0a5fed2878511cd5",
+      "nonce": 30428,
+      "hash": "0000a9701b6ec88e769f8385ab5cc7713cb850c1672e9c9493735defdc6d5ca8"
+    }
+  ]
+}

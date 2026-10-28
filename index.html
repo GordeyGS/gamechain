@@ -1,0 +1,1886 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameChain</title>
+<link rel="icon" id="favicon">
+<style>
+  :root {
+    --bg: #070a12;
+    --panel: rgba(255, 255, 255, .055);
+    --panel-2: rgba(255, 255, 255, .05);
+    --line: rgba(255, 255, 255, .12);
+    --text: #e6eaf2;
+    --muted: #8a94ad;
+    --accent: #8b7bff;
+    --accent-2: #36c5f0;
+    --ok: #3ddc97;
+    --bad: #ff5c6c;
+    --warn: #ffc857;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  .wrap { max-width: 1400px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  /* Шапка */
+  header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
+  /* Пиксельный заголовок с цепочками: холст 316×104, подзаголовок размещён в процентах от него
+     (справа от цепочек, свисающих с «G») */
+  .hero { position: relative; width: min(395px, 100%); }
+  .hero canvas { display: block; width: 100%; image-rendering: pixelated; }
+  .hero .sub { position: absolute; left: 12.7%; top: 52%; width: 86%; }
+  .sub { color: var(--muted); font-size: 13px; }
+  .status { margin-left: auto; padding: 8px 14px; border-radius: 999px; font-weight: 600;
+    border: 1px solid; transition: .3s; }
+  .status.ok { color: var(--ok); border-color: var(--ok); background: #3ddc9714; }
+  .status.bad { color: var(--bad); border-color: var(--bad); background: #ff5c6c1a; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 0 6px #ff5c6c22; } }
+
+  .grid { display: grid; grid-template-columns: 330px 1fr; gap: 16px; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } .status { margin-left: 0; } }
+
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 16px; }
+  .panel h2 { margin: 0 0 12px; font-size: 15px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .panel + .panel { margin-top: 16px; }
+
+  /* Вкладки и формы */
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-bottom: 12px; }
+  .tab { padding: 7px 4px; border: 1px solid var(--line); background: var(--panel-2);
+    border-radius: 8px; cursor: pointer; font-size: 13px; }
+  form { display: none; flex-direction: column; gap: 8px; }
+  form.active { display: flex; }
+  label { font-size: 12px; color: var(--muted); }
+  input, select, textarea { width: 100%; padding: 8px 10px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  .btn { padding: 9px 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2);
+    cursor: pointer; font-weight: 600; transition: .15s; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.danger { color: var(--bad); border-color: #ff5c6c66; }
+  .btn.danger:hover { background: #ff5c6c1a; border-color: var(--bad); }
+  .btn:disabled { opacity: .5; cursor: wait; }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row .btn { flex: 1; }
+
+  /* Игроки */
+  .players { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .player { background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px; padding: 14px; transition: .3s; }
+  .player.bad { border-color: var(--bad); box-shadow: 0 0 0 1px var(--bad) inset; }
+  .player .top { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .avatar { width: 38px; height: 38px; border-radius: 50%; display: grid; place-items: center; font-weight: 700;
+    background: linear-gradient(135deg, #8b7bff55, #36c5f055); }
+  .player .name { font-weight: 700; }
+  .player .mail { color: var(--muted); font-size: 13px; }
+  .stats { display: flex; gap: 14px; margin: 6px 0; font-size: 14px; }
+  .items { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; min-height: 26px; }
+  .chip { padding: 3px 9px; border-radius: 999px; background: #36c5f01f; border: 1px solid #36c5f055; font-size: 12px; }
+  .hash { font-family: var(--mono); font-size: 11px; color: var(--muted); word-break: break-all; }
+  .hash b { color: var(--ok); font-weight: 600; }
+  .bad .hash b, .hash b.bad { color: var(--bad); }
+  /* Сравнение двух хешей: совпавшие символы приглушены, изменившиеся — красные */
+  .hs { opacity: .45; } .hd, .kv .hd, .hash .hd { color: var(--bad); font-weight: 700; } .hok { color: var(--ok); }
+  .hash-note { font-size: 11px; color: #ffb3bb; margin: 2px 0 4px; }
+  .diff { color: var(--bad); font-size: 12px; margin-top: 6px; }
+  .hack { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 10px; display: none; gap: 6px; flex-direction: column; }
+  .player.hacking .hack { display: flex; }
+  .hack input { padding: 5px 8px; font-size: 13px; border-color: #ff5c6c55; }
+  .hack .lbl { font-size: 11px; color: var(--bad); }
+  .small-btn { font-size: 12px; padding: 4px 9px; margin-left: auto; }
+  .empty { color: var(--muted); padding: 20px; text-align: center; }
+
+  /* Отчёт проверки */
+  .report li { margin: 6px 0; color: var(--bad); font-size: 14px; }
+  .report ul { padding-left: 18px; margin: 8px 0 0; }
+  .report .good { color: var(--ok); }
+
+  /* Инвентарь и выбор предметов */
+  .inv { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; margin: 10px 0; }
+  .picker { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .slot { --r: var(--line); aspect-ratio: 1; position: relative; display: grid; place-items: center; padding: 0;
+    background: radial-gradient(circle at 50% 40%, #1f2a44, #0e1422); border: 2px solid #2b3756; border-radius: 7px; }
+  .slot:has(img) { border-color: color-mix(in srgb, var(--r) 55%, #2b3756); }
+  .slot img { width: 72%; image-rendering: pixelated; pointer-events: none; filter: drop-shadow(0 2px 0 #0008); }
+  .slot .cnt { position: absolute; right: 4px; bottom: 1px; font-size: 12px; font-weight: 800; text-shadow: 0 1px 2px #000; }
+  .slot[data-name]:hover::after { content: attr(data-name); position: absolute; bottom: calc(100% + 6px); left: 50%;
+    transform: translateX(-50%); white-space: nowrap; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700;
+    background: #0b0f17ee; border: 1px solid var(--r); color: var(--r); z-index: 5; pointer-events: none; }
+  .pick { cursor: pointer; transition: transform .12s; }
+  .pick:hover { transform: translateY(-2px); border-color: var(--r); }
+  .pick.sel { border-color: var(--r); box-shadow: 0 0 0 2px var(--r), 0 0 14px color-mix(in srgb, var(--r) 45%, transparent); }
+  .picked { font-size: 13px; color: var(--muted); min-height: 20px; }
+  .picked b { font-weight: 700; }
+  .mini { width: 16px; height: 16px; image-rendering: pixelated; vertical-align: -3px; margin-right: 2px; }
+
+  /* Журнал событий безопасности */
+  .log-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .log-head h2 { margin: 0; }
+  .log { max-height: 340px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+  .ev { display: grid; grid-template-columns: 64px 110px 1fr; gap: 10px; align-items: start;
+    padding: 8px 10px; border-radius: 8px; background: var(--panel-2); border-left: 3px solid var(--line); font-size: 13px; }
+  .ev.new { animation: drop .4s ease; }
+  /* Полные хеши (64 символа) переносятся по строкам, а не распирают страницу */
+  .ev > div, .report li, .diff { min-width: 0; overflow-wrap: anywhere; }
+  .ev time { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .ev .tag { font-size: 10px; font-weight: 700; letter-spacing: .04em; padding: 2px 7px; border-radius: 6px; justify-self: start; }
+  .ev ul { margin: 4px 0 0; padding-left: 16px; color: var(--muted); font-size: 12px; }
+  .ev.attack { border-left-color: var(--bad); } .ev.attack .tag { background: #ff5c6c26; color: var(--bad); }
+  .ev.detect { border-left-color: var(--warn); } .ev.detect .tag { background: #ffc85726; color: var(--warn); }
+  .ev.clean { border-left-color: var(--ok); } .ev.clean .tag { background: #3ddc9726; color: var(--ok); }
+  .ev.restore { border-left-color: var(--accent-2); } .ev.restore .tag { background: #36c5f026; color: var(--accent-2); }
+  .ev.system { border-left-color: var(--accent); } .ev.system .tag { background: #8b7bff26; color: #b9b0ff; }
+  .ev.blocked { border-left-color: #ff8a5c; } .ev.blocked .tag { background: #ff8a5c26; color: #ffab85; }
+  .lock-note { margin: 0 0 12px; padding: 9px 12px; border-radius: 12px; font-size: 13px; color: #ffb3bb;
+    background: rgba(255, 92, 108, .12); border: 1px solid rgba(255, 92, 108, .4); }
+  #ops-panel.locked form { opacity: .5; }
+  @media (max-width: 600px) { .ev { grid-template-columns: 1fr; gap: 4px; } }
+
+  /* Блокчейн */
+  .chain-panel { margin-top: 16px; }
+  .chain { display: flex; align-items: stretch; overflow-x: auto; padding: 6px 2px 14px; scroll-behavior: smooth; }
+  .block { flex: 0 0 250px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 12px;
+    padding: 12px; cursor: pointer; transition: .25s; position: relative; }
+  .block:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .block.bad { border-color: var(--bad); background: #2a1520; }
+  .block.scan { box-shadow: 0 0 0 2px var(--accent-2), 0 0 24px #36c5f066; }
+  .block.new { animation: drop .5s ease; }
+  @keyframes drop { from { opacity: 0; transform: translateY(-14px) scale(.96); } }
+  .block .bh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .block .idx { font-weight: 800; font-size: 18px; }
+  .op { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; letter-spacing: .04em; }
+  .op.GENESIS { background: #ffffff1a; }
+  .op.REGISTER_USER { background: #8b7bff33; color: #b9b0ff; }
+  .op.UPDATE_USER { background: #ffc85726; color: var(--warn); }
+  .op.ADD_ITEM { background: #3ddc9726; color: var(--ok); }
+  .op.TRANSFER_ITEM { background: #36c5f026; color: var(--accent-2); }
+  .block .desc { font-size: 13px; min-height: 38px; margin-bottom: 8px; }
+  .kv { font-family: var(--mono); font-size: 10.5px; color: var(--muted); word-break: break-all; margin-top: 4px; }
+  .kv span { color: var(--text); }
+  .kv .zeros { color: var(--ok); font-weight: 700; }
+  .kv.err span { color: var(--bad); }
+  .flag { color: var(--bad); font-size: 11px; font-weight: 700; margin-top: 6px; }
+  .link { flex: 0 0 34px; display: grid; place-items: center; color: var(--ok); font-size: 20px; }
+  .link.broken { color: var(--bad); }
+  .hint { color: var(--muted); font-size: 13px; margin: -4px 0 10px; }
+
+  /* Модальное окно */
+  .modal-bg { position: fixed; inset: 0; background: #000a; display: none; place-items: center; padding: 16px; z-index: 10; }
+  .modal-bg.open { display: grid; }
+  .modal { background: var(--panel); border: 1px solid var(--bad); border-radius: 14px; padding: 18px; width: min(560px, 100%); }
+  .modal h3 { margin: 0 0 6px; color: var(--bad); }
+  .modal textarea { min-height: 200px; font-family: var(--mono); font-size: 12px; margin: 10px 0; }
+
+  .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%) translateY(80px);
+    background: var(--panel-2); border: 1px solid var(--line); padding: 10px 16px; border-radius: 10px;
+    transition: .3s; z-index: 20; max-width: calc(100% - 32px); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.err { border-color: var(--bad); color: var(--bad); }
+  .mining { color: var(--accent-2); font-size: 13px; min-height: 20px; }
+  /* Прогресс импорта: стеклянная дорожка с градиентной полосой */
+  .progress { position: relative; margin-top: 10px; height: 26px; border-radius: 999px; overflow: hidden;
+    background: rgba(0, 0, 0, .26); border: 1px solid rgba(255, 255, 255, .1); box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); }
+  .progress[hidden] { display: none; }
+  .progress-bar { position: absolute; inset: 0 auto 0 0; width: 0; border-radius: inherit; transition: width .12s linear;
+    background: linear-gradient(90deg, rgba(139, 123, 255, .9), rgba(54, 197, 240, .8));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .4), 0 0 14px rgba(139, 123, 255, .6); }
+  .progress-text { position: relative; text-align: center; font-size: 12px; font-weight: 600; line-height: 24px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+  .explain { font-size: 13px; color: var(--muted); }
+  .explain b { color: var(--text); }
+
+  /* ═════════════════════════ Liquid Glass ═════════════════════════
+     Стекло = полупрозрачная заливка + размытие того, что под ним (backdrop-filter),
+     блик сверху-слева и светящаяся кромка. Под стеклом — пиксельная ночная сцена (холст #bg). */
+  :root {
+    --glass: linear-gradient(135deg, rgba(255, 255, 255, .11), rgba(255, 255, 255, .035));
+    --glass-blur: blur(22px) saturate(170%);
+    --glass-edge: rgba(255, 255, 255, .16);
+    --glass-shadow: inset 0 1px 0 rgba(255, 255, 255, .22), 0 24px 60px -24px rgba(0, 0, 0, .7);
+    --radius: 22px;
+  }
+  #bg { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; pointer-events: none;
+    image-rendering: pixelated; }
+
+  /* Крупные стеклянные поверхности */
+  header, .panel, .modal { position: relative; }
+  /* Полиция в шапке: пиксельный холст (1 пиксель = 3×3 экрана) стоит «на земле» — у нижнего края шапки */
+  #cops { flex: 1 1 240px; min-width: 240px; height: 66px; align-self: flex-end; margin-bottom: -8px;
+    image-rendering: pixelated; pointer-events: none; }
+  header.alarm { animation: siren 1s steps(1) infinite; }
+  @keyframes siren {
+    0%  { box-shadow: var(--glass-shadow), inset 0 -40px 60px -36px rgba(255, 59, 78, .45); }
+    50% { box-shadow: var(--glass-shadow), inset 0 -40px 60px -36px rgba(59, 130, 255, .45); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    header.alarm { animation: none; box-shadow: var(--glass-shadow), inset 0 -40px 60px -36px rgba(255, 59, 78, .4); }
+  }
+  header, .panel, .modal, .toast {
+    background: var(--glass); border: 1px solid var(--glass-edge);
+    -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+    box-shadow: var(--glass-shadow);
+  }
+  header { padding: 14px 20px; border-radius: var(--radius); }
+  .panel { border-radius: var(--radius); padding: 18px; }
+  /* Блик: мягкое световое пятно в верхнем левом углу */
+  header::before, .panel::before, .modal::before {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+    background: radial-gradient(120% 70% at 0% 0%, rgba(255, 255, 255, .14), transparent 45%);
+  }
+  /* Кромка: тонкая градиентная обводка, ярче на «освещённых» углах */
+  header::after, .panel::after, .modal::after, .btn::after {
+    content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none;
+    background: linear-gradient(140deg, rgba(255, 255, 255, .55), rgba(255, 255, 255, 0) 32%,
+                                rgba(255, 255, 255, 0) 68%, rgba(255, 255, 255, .22));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+  }
+  .panel > *, header > * { position: relative; }
+
+  /* Статус — стеклянная «капля» с цветным оттенком */
+  .status { -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25); }
+  .status.ok { background: rgba(61, 220, 151, .12); border-color: rgba(61, 220, 151, .5); }
+  .status.bad { background: rgba(255, 92, 108, .16); border-color: rgba(255, 92, 108, .6); }
+
+  /* Вкладки — сегментированный переключатель */
+  .tabs { background: rgba(0, 0, 0, .22); padding: 4px; border-radius: 14px; gap: 4px;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, .35); }
+  .tabs { position: relative; }
+  .tab { position: relative; z-index: 1; border: 1px solid transparent; background: transparent; border-radius: 10px;
+    color: var(--muted); transition: color .25s; }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); }
+  /* Стеклянная «капля» под активной вкладкой. Перелёт анимируется из JS (flowBlob):
+     в полёте капля вытягивается вдоль движения, в конце проскакивает и упруго встаёт на место. */
+  .tab-blob { position: absolute; left: 0; top: 0; z-index: 0; pointer-events: none; border-radius: 10px;
+    transform-origin: 50% 50%; will-change: transform;   /* отдельный слой: анимация не перерисовывает стекло панели */
+    background: rgba(255, 255, 255, .13); border: 1px solid rgba(255, 255, 255, .16);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 4px 14px -6px rgba(0, 0, 0, .6); }
+
+  /* Поля ввода — «утопленное» стекло */
+  input, select, textarea { background: rgba(0, 0, 0, .26); border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 12px; padding: 9px 12px; box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35); transition: .2s; }
+  input:focus, select:focus, textarea:focus { border-color: rgba(139, 123, 255, .8);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .35), 0 0 0 3px rgba(139, 123, 255, .22); }
+  select option { background: #151a2b; }
+  /* Своя стрелка у списков вместо системной: в цвет интерфейса и с отступом от края */
+  select { -webkit-appearance: none; appearance: none; cursor: pointer; padding-right: 40px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23b9b0ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 16px center; background-size: 12px 8px; }
+
+  /* Кнопки — стеклянные «капли» */
+  .btn { position: relative; border-radius: 14px; background: rgba(255, 255, 255, .08);
+    border: 1px solid rgba(255, 255, 255, .1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 6px 18px -10px rgba(0, 0, 0, .7); }
+  .btn::after { opacity: .6; }
+  .btn:hover { background: rgba(255, 255, 255, .14); border-color: rgba(255, 255, 255, .2); transform: translateY(-1px); }
+  .btn:active { transform: translateY(0) scale(.98); }
+  .btn.primary { color: #fff; border-color: rgba(255, 255, 255, .25);
+    background: linear-gradient(135deg, rgba(139, 123, 255, .9), rgba(54, 197, 240, .75));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .45), 0 10px 26px -10px rgba(139, 123, 255, .9); }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.danger { background: rgba(255, 92, 108, .08); border-color: rgba(255, 92, 108, .3); }
+  .btn.danger:hover { background: rgba(255, 92, 108, .18); border-color: rgba(255, 92, 108, .55); }
+
+  /* Карточки внутри панелей — светлее, без собственного размытия (так быстрее) */
+  .player, .block, .ev { background: rgba(255, 255, 255, .055); border: 1px solid rgba(255, 255, 255, .1);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12); }
+  .player, .block { border-radius: 18px; }
+  .ev { border-radius: 12px; border-left-width: 3px; }
+  .player.bad { background: rgba(255, 92, 108, .1); border-color: rgba(255, 92, 108, .7); }
+  .block:hover { border-color: rgba(139, 123, 255, .6); background: rgba(255, 255, 255, .08); }
+  .block.bad { background: rgba(255, 92, 108, .12); border-color: rgba(255, 92, 108, .7); }
+  .avatar { background: linear-gradient(135deg, rgba(139, 123, 255, .7), rgba(54, 197, 240, .6));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .35); }
+
+  /* Ячейки инвентаря — маленькие стеклянные плитки */
+  .slot { background: linear-gradient(160deg, rgba(255, 255, 255, .1), rgba(255, 255, 255, .02));
+    border: 1.5px solid rgba(255, 255, 255, .1); border-radius: 12px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), inset 0 -6px 12px rgba(0, 0, 0, .18); }
+  .slot:has(img) { border-color: color-mix(in srgb, var(--r) 55%, rgba(255, 255, 255, .1));
+    background: linear-gradient(160deg, color-mix(in srgb, var(--r) 18%, rgba(255, 255, 255, .08)), rgba(255, 255, 255, .02)); }
+  .slot[data-name]:hover::after { background: rgba(10, 14, 24, .75); -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px); border-radius: 10px; }
+
+  /* Модальное окно и уведомления */
+  .modal-bg { background: rgba(5, 8, 15, .45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+  .modal { border-radius: var(--radius); border-color: rgba(255, 92, 108, .45); padding: 22px; }
+  .modal textarea { border-radius: 14px; }
+  .toast { border-radius: 16px; padding: 11px 18px; }
+  .toast.err { border-color: rgba(255, 92, 108, .6); }
+
+  /* Тонкая стеклянная полоса прокрутки */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .14); border-radius: 999px;
+    border: 2px solid transparent; background-clip: padding-box; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div class="wrap">
+  <header>
+    <div class="hero">
+      <h1 style="margin:0"><canvas id="hero" width="316" height="104" role="img" aria-label="GameChain"></canvas></h1>
+      <div class="sub">Система учёта и передачи игровых предметов на основе технологии блокчейн</div>
+    </div>
+    <canvas id="cops" aria-hidden="true"></canvas>
+    <div id="status" class="status ok">✔ Цепочка цела</div>
+  </header>
+
+  <div class="grid">
+    <aside>
+      <div class="panel" id="ops-panel">
+        <h2>Операции</h2>
+        <div class="lock-note" id="lock-note" hidden>⛔ Операции заблокированы: в системе есть нарушения целостности.
+          Новые блоки «отмыли» бы подменённые данные. Нажмите «Откатить взлом».</div>
+        <div class="tabs">
+          <button class="tab active" data-tab="f-reg">Регистрация</button>
+          <button class="tab" data-tab="f-item">Предмет</button>
+          <button class="tab" data-tab="f-tr">Передача</button>
+          <button class="tab" data-tab="f-upd">Профиль</button>
+        </div>
+
+        <form id="f-reg" class="active">
+          <label>Логин</label><input name="username" required placeholder="alice">
+          <label>Никнейм</label><input name="nickname" required placeholder="Alice_Knight">
+          <label>Email</label><input name="email" type="email" required placeholder="alice@mail.ru">
+          <label>Пароль</label><input name="password" type="password" required>
+          <button class="btn primary">Зарегистрировать</button>
+        </form>
+
+        <form id="f-item">
+          <label>Игрок</label><select name="username" class="user-select"></select>
+          <label>Предмет</label>
+          <div class="picker" id="item-picker"></div>
+          <input type="hidden" name="item" id="item-value">
+          <div class="picked" id="item-picked"></div>
+          <button class="btn primary">Выдать предмет</button>
+        </form>
+
+        <form id="f-tr">
+          <label>От кого</label><select name="from" class="user-select"></select>
+          <label>Предмет из инвентаря</label>
+          <div class="picker" id="tr-picker"></div>
+          <input type="hidden" name="item" id="tr-item">
+          <div class="picked" id="tr-picked"></div>
+          <label>Кому</label><select name="to" class="user-select"></select>
+          <button class="btn primary">Передать</button>
+        </form>
+
+        <form id="f-upd">
+          <label>Игрок</label><select name="username" class="user-select"></select>
+          <label>Поле</label>
+          <select name="field">
+            <option value="nickname">Никнейм</option>
+            <option value="email">Email</option>
+            <option value="level">Уровень</option>
+            <option value="gold">Золото</option>
+          </select>
+          <label>Новое значение</label><input name="value" required>
+          <button class="btn primary">Сохранить</button>
+        </form>
+        <div id="mining" class="mining"></div>
+      </div>
+
+      <div class="panel">
+        <h2>Управление</h2>
+        <div class="row">
+          <button class="btn" id="btn-demo">Демо-данные</button>
+          <button class="btn" id="btn-verify">Проверить</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="btn-restore" title="Вернуть состояние до последней атаки">Откатить взлом</button>
+          <button class="btn danger" id="btn-reset">Сбросить всё</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button class="btn" id="btn-export">Экспорт JSON</button>
+          <button class="btn" id="btn-import">Импорт JSON</button>
+          <input type="file" id="file" accept=".json" hidden>
+        </div>
+        <div class="progress" id="import-progress" hidden>
+          <div class="progress-bar"></div>
+          <div class="progress-text"></div>
+        </div>
+      </div>
+
+      <div class="panel explain">
+        <h2>Как это работает</h2>
+        <p>Каждая операция записывается в <b>блок</b>. Хеш блока — <b>SHA-256</b> от его содержимого,
+          и каждый блок хранит хеш предыдущего. Хеш должен начинаться с <b>0000</b> (Proof-of-Work).</p>
+        <p>В блок также записывается SHA-256 <b>отпечаток учётной записи</b> — так видна подмена данных в базе.</p>
+        <p>Попробуйте: нажмите <b>«Взломать»</b> на карточке игрока или кликните по <b>блоку</b>, чтобы изменить историю.</p>
+      </div>
+    </aside>
+
+    <main>
+      <div class="panel">
+        <h2>Учётные записи (база данных)</h2>
+        <div id="players" class="players"></div>
+      </div>
+      <div class="panel report">
+        <h2>Проверка целостности</h2>
+        <div id="report"></div>
+      </div>
+      <div class="panel">
+        <div class="log-head">
+          <h2>Журнал событий безопасности</h2>
+          <button class="btn small-btn" id="btn-clear-log">Очистить</button>
+        </div>
+        <div class="hint">Журнал администратора: атаки, проверки и откаты. Он не входит в блокчейн.</div>
+        <div id="log" class="log"></div>
+      </div>
+    </main>
+  </div>
+
+  <div class="panel chain-panel">
+    <h2>Блокчейн</h2>
+    <div class="hint">Кликните по блоку, чтобы подделать запись в истории</div>
+    <div id="chain" class="chain"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>⚠ Атака: изменение блока #<span id="m-idx"></span></h3>
+    <div class="explain">Отредактируйте данные блока так, как это сделал бы злоумышленник.</div>
+    <textarea id="m-data" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="btn danger" id="m-save">Изменить данные</button>
+      <button class="btn danger" id="m-rehash">Изменить + пересчитать хеш</button>
+      <button class="btn" id="m-cancel">Отмена</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ═════════════════════ SHA-256 (реализация по FIPS 180-4) ═════════════════════ */
+/* SHA256-BEGIN */
+const K = new Uint32Array([
+  0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
+  0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,
+  0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,
+  0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,
+  0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,
+  0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,
+  0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,
+  0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2]);
+const encoder = new TextEncoder();
+const W = new Uint32Array(64);
+
+const H0 = new Uint32Array([0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19]);
+
+/* Функция сжатия: обрабатывает первые n байт buf (n кратно 64) и обновляет состояние H */
+function sha256Blocks(H, buf, n) {
+  const dv = new DataView(buf.buffer, buf.byteOffset, n);
+  for (let off = 0; off < n; off += 64) {
+    for (let i = 0; i < 16; i++) W[i] = dv.getUint32(off + i * 4);
+    for (let i = 16; i < 64; i++) {
+      const x = W[i - 15], y = W[i - 2];
+      const s0 = ((x >>> 7) | (x << 25)) ^ ((x >>> 18) | (x << 14)) ^ (x >>> 3);
+      const s1 = ((y >>> 17) | (y << 15)) ^ ((y >>> 19) | (y << 13)) ^ (y >>> 10);
+      W[i] = (W[i - 16] + s0 + W[i - 7] + s1) | 0;
+    }
+    let a = H[0], b = H[1], c = H[2], d = H[3], e = H[4], f = H[5], g = H[6], h = H[7];
+    for (let i = 0; i < 64; i++) {
+      const S1 = ((e >>> 6) | (e << 26)) ^ ((e >>> 11) | (e << 21)) ^ ((e >>> 25) | (e << 7));
+      const t1 = (h + S1 + ((e & f) ^ (~e & g)) + K[i] + W[i]) | 0;
+      const S0 = ((a >>> 2) | (a << 30)) ^ ((a >>> 13) | (a << 19)) ^ ((a >>> 22) | (a << 10));
+      const t2 = (S0 + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H[0] += a; H[1] += b; H[2] += c; H[3] += d; H[4] += e; H[5] += f; H[6] += g; H[7] += h;
+  }
+}
+
+/* Дополнение и досчёт хеша: tail — оставшиеся байты, done — сколько байт уже обработано в H */
+function sha256Finish(H, tail, done) {
+  const len = tail.length, n = ((len + 9 + 63) >> 6) << 6;   // длина с дополнением, кратная 64 байтам
+  const buf = new Uint8Array(n);
+  buf.set(tail);
+  buf[len] = 0x80;
+  const bits = (done + len) * 8, dv = new DataView(buf.buffer);
+  dv.setUint32(n - 8, Math.floor(bits / 0x100000000));
+  dv.setUint32(n - 4, bits >>> 0);
+  sha256Blocks(H, buf, n);
+  return H;
+}
+
+const toHex = H => { let hex = ""; for (let i = 0; i < 8; i++) hex += H[i].toString(16).padStart(8, "0"); return hex; };
+
+function sha256(str) {
+  return toHex(sha256Finish(new Uint32Array(H0), encoder.encode(str), 0));
+}
+
+/* Майнинг с «мидстейтом»: начало блока до nonce одинаково для всех попыток, поэтому его полные
+   64-байтные куски хешируются один раз, а на каждую попытку досчитывается только хвост.
+   Сложность проверяется прямо по первому слову состояния: d hex-нулей = старшие 4·d бит равны нулю. */
+function findNonce(pre, post, difficulty, onProgress) {
+  const preB = encoder.encode(pre), postB = encoder.encode(post);
+  const full = preB.length - (preB.length % 64);
+  const mid = new Uint32Array(H0);
+  sha256Blocks(mid, preB, full);
+  const rest = preB.subarray(full), shift = 32 - 4 * difficulty;
+  const tail = new Uint8Array(rest.length + 20 + postB.length), H = new Uint32Array(8);
+  tail.set(rest);
+  for (let nonce = 0; ; nonce++) {
+    const digits = String(nonce);
+    let p = rest.length;
+    for (let i = 0; i < digits.length; i++) tail[p++] = digits.charCodeAt(i);
+    tail.set(postB, p);
+    H.set(mid);
+    sha256Finish(H, tail.subarray(0, p + postB.length), full);
+    if ((H[0] >>> shift) === 0) return { nonce, hash: toHex(H) };
+    if (onProgress && nonce % 20000 === 0) onProgress(nonce);
+  }
+}
+
+/* Каноническое JSON-представление (ключи по алфавиту) — совпадает с Python-версией */
+function canonical(v) {
+  if (Array.isArray(v)) return "[" + v.map(canonical).join(",") + "]";
+  if (v && typeof v === "object")
+    return "{" + Object.keys(v).sort().map(k => JSON.stringify(k) + ":" + canonical(v[k])).join(",") + "}";
+  return JSON.stringify(v);
+}
+/* SHA256-END */
+
+/* ═════════════ Каталог игровых предметов (пиксель-арт 16×16) ═════════════ */
+const PAL = { k: "#161622", w: "#ffffff", s: "#d5dceb", S: "#8d99ae", d: "#4a5568", c: "#f0a868", C: "#b0622f",
+  y: "#ffd84a", Y: "#c98a12", b: "#b5773f", B: "#6e4220", r: "#ff5a5a", R: "#a81c2c", o: "#ffa23c",
+  u: "#4da6ff", U: "#1f4fa8", a: "#9ff4ff", g: "#6ee58a", G: "#23824a", p: "#c08cff", P: "#6b33c4" };
+
+/* Шаблоны форм: «.» — прозрачный пиксель, заглавные буквы — цвета конкретного предмета */
+const SHAPES = {
+  sword: ["................", "............kkk.", "...........kLLk.", "..........kLLDk.", ".........kLLDk..",
+          "........kLLDk...", ".......kLLDk....", "......kLLDk.....", "..kk.kLLDk......", "..kGkLLDk.......",
+          "...kGGDk........", "...kHGGk........", "..kHk.kGk.......", ".kPk...kk.......", ".kk.............", "................"],
+  pick:  ["................", "...kkkkkk.......", "..kMMMMMMkk.....", ".kMNNNNNMMMk....", ".kNk...kkNMMk...",
+          "..k...kbk..kNMk.", "......kbBk..kNk.", ".....kbBk...kNk.", "....kbBk.....kk.", "...kbBk.........",
+          "..kbBk..........", ".kbBk...........", ".kBk............", ".kk.............", "................", "................"],
+  staff: ["..........kkk...", ".........kOOOk..", "........kOwOOQk.", "........kOOOQQk.", "........kOQQQQk.",
+          ".........kQQQk..", "........kbkkk...", ".......kbBk.....", "......kbBk......", ".....kbBk.......",
+          "....kbBk........", "...kbBk.........", "..kbBk..........", ".kbBk...........", ".kBk............", "..k............."],
+  potion: ["................", "................", "......kkkk......", "......kBBk......", ".....kkwwkk.....",
+          "......kwwk......", ".....kwwwwk.....", "....kwLLLLwk....", "...kwLLwLLLDk...", "...kLLwLLLLDk...",
+          "...kLLLLLLLDk...", "...kLLLLLLDDk...", "....kLLLLDDk....", ".....kkkkkk.....", "................", "................"],
+  shield: ["................", "..kkkkkkkkkkkk..", "..kEEEEEEEEEEk..", "..kEFFFXXFFFEk..", "..kEFFFXXFFFEk..",
+          "..kEFXXXXXXFEk..", "..kEFXXXXXXFEk..", "..kEFFFXXFFFEk..", "..kEFFFXXFFFEk..", "...kEFFXXFFEk...",
+          "...kEFFXXFFEk...", "....kEFFFFEk....", ".....kEFFEk.....", "......kEEk......", ".......kk.......", "................"],
+  helmet: ["................", "................", "................", ".....kkkkkk.....", "....kMMMMMNk....",
+          "...kMMwMMMMNk...", "...kMwMMMMMNk...", "..kMMMMMMMMNNk..", "..kMMMMMMMMMNk..", "..kNNNNNNNNNNk..",
+          "..kMkkkkkkkkNk..", "..kMk.....kNNk..", "..kMk......kNk..", "..kkk......kkk..", "................", "................"],
+  gem:   ["................", "................", "................", ".....kkkkkk.....", "....kwLLLLDk....",
+          "...kwwLLLLDDk...", "..kkkkkkkkkkkk..", "..kLwLLLLLLDDk..", "...kLLLLLLLDk...", "....kLLLLLDk....",
+          ".....kLLLDk.....", "......kLDk......", ".......kk.......", "................", "................", "................"],
+  chest: ["................", "................", "..kkkkkkkkkkkk..", "..kbbbbbbbbbbk..", "..kbBBBBBBBBbk..",
+          "..kbBBBBBBBBbk..", "..kyyyyyyyyyyk..", "..kbBBBkkBBBbk..", "..kbBBBBBBBBbk..", "..kbBBBBBBBBbk..",
+          "..kbBBBBBBBBbk..", "..kbbbbbbbbbbk..", "..kkkkkkkkkkkk..", "................", "................", "................"],
+};
+
+const RARITY = {
+  common:    { name: "обычный",     color: "#c9d1e0" },
+  uncommon:  { name: "необычный",   color: "#6ee58a" },
+  rare:      { name: "редкий",      color: "#4da6ff" },
+  epic:      { name: "эпический",   color: "#c08cff" },
+  legendary: { name: "легендарный", color: "#ffa23c" },
+};
+
+const ITEMS = [
+  { name: "Медный меч",       rarity: "common",    shape: "sword",  c: { L: "c", D: "C", G: "B", H: "b", P: "c" } },
+  { name: "Железный меч",     rarity: "uncommon",  shape: "sword",  c: { L: "s", D: "S", G: "d", H: "B", P: "S" } },
+  { name: "Ледяной клинок",   rarity: "rare",      shape: "sword",  c: { L: "a", D: "u", G: "U", H: "B", P: "a" } },
+  { name: "Меч дракона",      rarity: "legendary", shape: "sword",  c: { L: "o", D: "R", G: "y", H: "B", P: "r" } },
+  { name: "Медная кирка",     rarity: "common",    shape: "pick",   c: { M: "c", N: "C" } },
+  { name: "Золотая кирка",    rarity: "rare",      shape: "pick",   c: { M: "y", N: "Y" } },
+  { name: "Посох огня",       rarity: "epic",      shape: "staff",  c: { O: "o", Q: "r" } },
+  { name: "Посох льда",       rarity: "rare",      shape: "staff",  c: { O: "a", Q: "u" } },
+  { name: "Посох тьмы",       rarity: "epic",      shape: "staff",  c: { O: "p", Q: "P" } },
+  { name: "Деревянный щит",   rarity: "common",    shape: "shield", c: { E: "S", F: "b", X: "B" } },
+  { name: "Щит паладина",     rarity: "epic",      shape: "shield", c: { E: "y", F: "U", X: "w" } },
+  { name: "Железный шлем",    rarity: "uncommon",  shape: "helmet", c: { M: "s", N: "S" } },
+  { name: "Золотой шлем",     rarity: "rare",      shape: "helmet", c: { M: "y", N: "Y" } },
+  { name: "Зелье здоровья",   rarity: "common",    shape: "potion", c: { L: "r", D: "R" } },
+  { name: "Зелье маны",       rarity: "common",    shape: "potion", c: { L: "u", D: "U" } },
+  { name: "Зелье удачи",      rarity: "uncommon",  shape: "potion", c: { L: "g", D: "G" } },
+  { name: "Рубин",            rarity: "rare",      shape: "gem",    c: { L: "r", D: "R" } },
+  { name: "Изумруд",          rarity: "rare",      shape: "gem",    c: { L: "g", D: "G" } },
+  { name: "Аметист",          rarity: "epic",      shape: "gem",    c: { L: "p", D: "P" } },
+  { name: "Алмаз",            rarity: "legendary", shape: "gem",    c: { L: "a", D: "u" } },
+];
+const ITEM_BY_NAME = Object.fromEntries(ITEMS.map(i => [i.name, i]));
+const UNKNOWN_ITEM = { shape: "chest", c: {} };   // предмет не из каталога (например, введённый в Python-версии)
+
+/* Рисует пиксельный спрайт 16×16 и возвращает его как картинку (data URL) */
+function drawSprite(rows, colors = {}) {
+  const cv = document.createElement("canvas");
+  cv.width = cv.height = 16;
+  const ctx = cv.getContext("2d");
+  rows.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === ".") return;
+    const key = colors[ch] || ch;
+    ctx.fillStyle = PAL[key] || key;
+    ctx.fillRect(x, y, 1, 1);
+  }));
+  return cv.toDataURL();
+}
+
+const spriteCache = {};
+function spriteURL(name) {
+  const it = ITEM_BY_NAME[name] || UNKNOWN_ITEM;
+  return spriteCache[name] || (spriteCache[name] = drawSprite(SHAPES[it.shape], it.c));
+}
+
+/* ═════════════ Логотип и пиксельный шрифт названия ═════════════ */
+/* Логотип — два золотых звена цепи, соединённых стальным звеном (на градиентной плитке-«блоке») */
+const LOGO = ["................", "................", "................", "................",
+              ".kkkkk....kkkkk.", "kywyyyk..kywyyyk", "kyYkkkkkkkkkkYyk", "kyykwwwwwwwwkyyk",
+              "kyykSSSSSSSSkyyk", "kyYkkkkkkkkkkYyk", "kyyyyyk..kyyyyyk", ".kkkkk....kkkkk.",
+              "................", "................", "................", "................"];
+const LOGO_COLORS = { k: "#1b1440" };
+
+/* Глифы 5×7 (у «i» ширина 3). «#» — закрашенный пиксель */
+const FONT = {
+  G: [".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".###."],
+  C: [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."],
+  a: [".....", ".....", ".###.", "....#", ".####", "#...#", ".####"],
+  m: [".....", ".....", "##.#.", "#.#.#", "#.#.#", "#.#.#", "#.#.#"],
+  e: [".....", ".....", ".###.", "#...#", "#####", "#....", ".###."],
+  h: ["#....", "#....", "####.", "#...#", "#...#", "#...#", "#...#"],
+  i: [".#.", "...", "##.", ".#.", ".#.", ".#.", "###"],
+  n: [".....", ".....", "####.", "#...#", "#...#", "#...#", "#...#"],
+};
+
+/* ═════════════ Заголовок: пиксельное название с цепочками-брелоками на букве «G» ═════════════ */
+/* Всё рисуется на холсте 316×104 и растягивается без сглаживания.
+   Пиксель шрифта = 6×6 пикселей холста, а звенья цепи рисуются линией в 1 пиксель — поэтому они тонкие.
+   Текст стоит в точке (TX, TY). */
+const HW = 316, HH = 104, FS = 6;
+const TX = 4, TY = 4;
+const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const TITLE_PX = (() => {
+  const px = [];
+  let x = 0;
+  for (const ch of "GameChain") {
+    FONT[ch].forEach((row, y) => [...row].forEach((p, i) => { if (p === "#") px.push([x + i, y]); }));
+    x += FONT[ch][0].length + 1;
+  }
+  return px;
+})();
+
+/* Звенья: плоское кольцо и звено «ребром»; l — светлый, d — тёмный, h — блик */
+const LINK = {
+  ringH: [".hll.", "l...d", "l...d", ".ddd."],
+  ringV: [".h.", "l.d", "l.d", "l.d", ".d."],
+  barH:  ["hlld"],
+  barV:  ["h", "l", "l", "d"],
+};
+const PENDANT = {
+  lock: ["..sss..", ".s...s.", ".s...s.", "yyyyyyy", "ywyyyyY", "yyykyyY", "yyykyyY", "YYYYYYY"],
+  gem:  [".aaaau.", "awaaauU", ".aaauU.", "..auU..", "...U..."],
+};
+/* Цепочки крепятся к нижнему краю «G»: col — столбец пикселя шрифта, к которому подвешена цепь */
+const CHAINS = [
+  { l: "#f5c842", d: "#b07a10", h: "#fff3b8", col: 1, hang: 36, pendant: "lock", phase: 0 },
+  { l: "#d8dfec", d: "#7d889e", h: "#ffffff", col: 3, hang: 22, pendant: "gem",  phase: 1.9 },
+];
+const SHADOW = "#1b1440";
+const PENDANT_SCALE = 2;
+
+const heroCtx = document.getElementById("hero").getContext("2d");
+const px = (x, y, color, w = 1, h = 1) => { heroCtx.fillStyle = color; heroCtx.fillRect(x, y, w, h); };
+
+/* Рисует шаблон; colors сопоставляет буквы шаблона цветам, s — размер пикселя шаблона */
+function stamp(rows, x, y, colors, s = 1, shadow = false) {
+  if (shadow) rows.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== ".") px(x + i * s + s, y + j * s + s, SHADOW, s, s); }));
+  rows.forEach((row, j) => [...row].forEach((ch, i) => { if (ch !== ".") px(x + i * s, y + j * s, colors[ch] || PAL[ch], s, s); }));
+}
+
+/* Путь цепи: от точки крепления вниз; чем ниже звено, тем сильнее оно отклоняется при раскачивании */
+function chainPath(c, t) {
+  let x = TX + c.col * FS + FS / 2, y = TY + 7 * FS, head = Math.PI / 2;
+  const pts = [[x, y]];
+  for (let s = 0; s < c.hang; s += 0.5) {
+    const swing = 0.25 * Math.sin(t * 1.4 + c.phase) * (s / c.hang);
+    head += Math.max(-0.1, Math.min(0.1, Math.PI / 2 - swing - head));
+    x += 0.5 * Math.cos(head);
+    y += 0.5 * Math.sin(head);
+    pts.push([x, y]);
+  }
+  return pts;
+}
+
+/* Расставляет звенья через каждые 3,5 пикселя пути, чередуя кольцо и звено ребром */
+function chainLinks(pts) {
+  const links = [];
+  let dist = 3.5, n = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const dx = pts[i][0] - pts[i - 1][0], dy = pts[i][1] - pts[i - 1][1];
+    dist += Math.hypot(dx, dy);
+    if (dist < 3.5) continue;
+    dist = 0;
+    const horiz = Math.abs(dx) >= Math.abs(dy), ring = n++ % 2 === 0;
+    const rows = ring ? (horiz ? LINK.ringH : LINK.ringV) : (horiz ? LINK.barH : LINK.barV);
+    links.push({ rows, x: Math.round(pts[i][0] - rows[0].length / 2), y: Math.round(pts[i][1] - rows.length / 2) });
+  }
+  return links;
+}
+
+/* Надпись рисуется один раз в отдельный слой (с размытым свечением это дороже),
+   а каждый кадр просто копируется на холст под цепочки */
+let titleLayer = null;
+function drawTitle() {
+  if (!titleLayer) {
+    titleLayer = document.createElement("canvas");
+    titleLayer.width = HW; titleLayer.height = HH;
+    const g = titleLayer.getContext("2d");
+    const fill = (color, dx = 0) => {
+      g.fillStyle = color;
+      for (const [x, y] of TITLE_PX) g.fillRect(TX + x * FS + dx, TY + y * FS + dx, FS, FS);
+    };
+    // Неоновое свечение: широкое сиреневое сияние и плотный голубой ореол вокруг букв
+    g.save();
+    g.shadowColor = "rgba(160, 120, 255, .75)"; g.shadowBlur = 16; fill("#b9b0ff");
+    g.shadowColor = "rgba(80, 210, 255, .9)";   g.shadowBlur = 7;  fill("#9fe4ff");
+    g.restore();
+    // Пиксельная тень и сами буквы с вертикальным градиентом
+    fill("#2a1f6b", 3);
+    const grad = ["#ffffff", "#ece9ff", "#d2caff", "#b9b0ff", "#93b6fb", "#64bdf5", "#36c5f0"];
+    for (const [x, y] of TITLE_PX) { g.fillStyle = grad[y]; g.fillRect(TX + x * FS, TY + y * FS, FS, FS); }
+  }
+  heroCtx.drawImage(titleLayer, 0, 0);
+}
+
+function drawHero(t) {
+  heroCtx.clearRect(0, 0, HW, HH);
+  drawTitle();
+  for (const c of CHAINS) {
+    const pts = chainPath(c, t);
+    const [ax, ay] = pts[0];
+    stamp(LINK.ringH, Math.round(ax - 2.5), ay - 3, c);          // ушко, продетое в низ буквы
+    for (const L of chainLinks(pts)) stamp(L.rows, L.x, L.y, c);
+    const [x, y] = pts[pts.length - 1], rows = PENDANT[c.pendant];
+    stamp(rows, Math.round(x - rows[0].length * PENDANT_SCALE / 2), Math.round(y), {}, PENDANT_SCALE, true);
+  }
+}
+
+/* Покачивание цепочек — примерно 12 кадров в секунду, как в пиксельных играх */
+/* ═════════════ Полиция: приезжает в шапку, когда нарушена целостность ═════════════ */
+const COP_PAL = { k: "#0b0b12", K: "#2a2c35", G: "#565b6b", w: "#f2f4f8", l: "#c9cdd8", t: "#15151c",
+                  v: "#2e3170", V: "#6b70c9", o: "#ff8a3d", y: "#ffe9a8", r: "#ff3b3b", d: "#1c1c26",
+                  s: "#8e94a8", h: "#d8dce8", B: "#1c2f7a", b: "#3157d4", f: "#f2c29b" };
+/* Машина смотрит вправо; R и U — секции мигалки, их цвета меняются при мигании */
+/* Полицейская машина-седан, перед — справа: чёрные капот и багажник (K, G — блик), белые двери и крыша,
+   тёмные стёкла (v, V — блик), стоп-сигнал (r) сзади и фара (y) спереди.
+   Мигалка: U — синяя половина, R — красная; L и M — лучи света над ней (синие и красные), мигают вместе с ней */
+const CAR = ["................L...M...................",
+             ".............L..L...M..M................",
+             "..............L.......M.................",
+             "...........LL...........MM..............",
+             "..............kUUUkRRRk.................",
+             "............kkkkkkkkkkkkkkk.............",
+             "...........kwwwwwwwwwwwwwwwk............",
+             "..........kwVvvvvvkVvvvvvvvkk...........",
+             ".........kwVvvvvvvkVvvvvvvvvvk..........",
+             "..kGGGGGGwwwwwwwwwwkwwwwwwwwwwGGGGGGGk..",
+             "krKKKKKKKwwwwwGwwwwkwwwwGwwwwwKKKKKKKKyk",
+             "krKKKKKKKwwwwwwwwwwkwwwwwwwwwwKKKKKKKKyk",
+             "kKKKKKkkkkkwwwwwwwwkwwwwwwwwwkkkkkKKKKKk",
+             "kKKKKkdddddkwwwwwwwkwwwwwwwwkdddddkKKKKk",
+             "kkkkkddsssddkkkkkkkkkkkkkkkkddsssddkkkkk",
+             "....kdsskssdk..............kdsskssdk....",
+             ".....kdsssdk................kdsssdk.....",
+             "......kkkkk..................kkkkk......"];
+const COP = ["..kkkk..", ".kBBBBk.", "kkkkkkkk", ".kffffk.", ".kfkfkk.", ".kffffk.", "..kbbk..",
+             ".kbybbk.", "kbbbbbbk", "kfbbbbfk", ".kBBBBk.", ".kBkkBk.", ".kBkkBk.", ".kk..kk."];
+const ALERT = ["kkkkkkk", "kwwrwwk", "kwwrwwk", "kwwwwwk", "kwwrwwk", "kkkkkkk", "..kk..."];
+const COPS_H = 22, CAR_W = 40;
+
+const copsCanvas = document.getElementById("cops"), copsCtx = copsCanvas.getContext("2d");
+copsCanvas.height = COPS_H;
+/* yaw — разворот машины: 1 = мордой вправо, −1 = мордой влево; промежуточные значения — машина в повороте */
+const cops = { want: false, phase: "away", carX: -CAR_W, from: 0, to: 0, t0: 0, out: 0, yaw: 1, smoke: [], skids: [] };
+const copsTarget = () => Math.max(0, copsCanvas.width - CAR_W - 4);
+
+function paintRows(ctx, rows, x, y, colors = {}) {
+  rows.forEach((row, j) => [...row].forEach((ch, i) => {
+    if (ch === ".") return;
+    const color = ch in colors ? colors[ch] : COP_PAL[ch];
+    if (!color) return;
+    ctx.fillStyle = color;
+    ctx.fillRect(x + i, y + j, 1, 1);
+  }));
+}
+const drawRows = (rows, x, y, colors) => paintRows(copsCtx, rows, x, y, colors);
+
+/* Машина рисуется один раз в отдельный спрайт (два варианта мигалки), а при развороте он сжимается по ширине */
+/* Машина, смотрящая влево: каждая строка отражается, но надпись (t) переносится без отражения */
+const CAR_LEFT = (() => {
+  const xs = CAR.flatMap(row => [...row].flatMap((ch, x) => ch === "t" ? [x] : []));
+  const minX = Math.min(...xs), shift = CAR_W - 1 - Math.max(...xs) - minX;
+  return CAR.map(row => {
+    const out = [...row].reverse().map(ch => ch === "t" ? "w" : ch);
+    [...row].forEach((ch, x) => { if (ch === "t") out[x + shift] = "t"; });
+    return out.join("");
+  });
+})();
+
+const carSprites = {};
+function carSprite(flash, left) {
+  const key = `${flash}-${left}`;
+  if (!carSprites[key]) {
+    const c = document.createElement("canvas");
+    c.width = CAR_W; c.height = CAR.length;
+    paintRows(c.getContext("2d"), left ? CAR_LEFT : CAR, 0, 0,
+              { R: flash ? "#ff3b4e" : "#5a1020", U: flash ? "#1a2a66" : "#3b82ff",
+                L: flash ? null : "#4aa3ff", M: flash ? "#ff5a5a" : null });
+    carSprites[key] = c;
+  }
+  return carSprites[key];
+}
+
+function drawCops(now) {
+  copsCtx.clearRect(0, 0, copsCanvas.width, COPS_H);
+  if (cops.phase === "away" && !cops.smoke.length) return;
+  const flash = Math.floor(now / 250) % 2 === 0;
+  const ground = COPS_H - 1;
+  // Следы шин после дрифта — тёмные полосы на земле, постепенно бледнеют
+  for (const m of cops.skids) {
+    copsCtx.fillStyle = `rgba(8, 6, 18, ${0.7 * m.a})`;
+    copsCtx.fillRect(Math.round(m.x), ground, 1, 1);
+  }
+  if (cops.phase !== "away") {
+    // Полицейские выходят из-за машины влево (рисуются раньше машины — сначала спрятаны за ней)
+    if (cops.out > 0) {
+      const p = 1 - Math.pow(1 - cops.out, 2), carX = Math.round(cops.carX);
+      const x1 = Math.round(carX + 6 - 16 * p), x2 = Math.round(carX + 6 - 28 * p);
+      drawRows(COP, x2, ground - COP.length + 1);
+      drawRows(COP, x1, ground - COP.length + 1);
+      if (cops.out === 1 && flash) drawRows(ALERT, x1, 0);
+    }
+    // Машина: при развороте спрайт сжимается по ширине и сменяется на смотрящий в другую сторону —
+    // как поворот вокруг вертикальной оси
+    const w = Math.max(6, Math.round(Math.abs(cops.yaw) * CAR_W)), cx = Math.round(cops.carX + CAR_W / 2);
+    copsCtx.imageSmoothingEnabled = false;
+    copsCtx.drawImage(carSprite(flash, cops.yaw < 0), cx - Math.round(w / 2), ground - CAR.length + 1, w, CAR.length);
+  }
+  // Дым из-под колёс
+  for (const pf of cops.smoke) {
+    copsCtx.fillStyle = `rgba(225, 225, 240, ${0.55 * pf.life})`;
+    copsCtx.fillRect(Math.round(pf.x), Math.round(pf.y), Math.round(pf.s), Math.round(pf.s));
+  }
+}
+
+function puff(x) {
+  cops.smoke.push({ x: x + Math.random() * 3 - 1.5, y: COPS_H - 3, vx: Math.random() * 0.8 - 0.4,
+                    vy: -0.2 - Math.random() * 0.35, s: 1 + Math.random(), life: 1 });
+}
+
+/* Состояния: away → arriving (влёт и дрифт) → parked (полицейские выходят) → boarding → leaving → away */
+function copsStep(now) {
+  if (cops.phase === "arriving") {
+    const t = Math.min(1, (now - cops.t0) / 1600);
+    const base = cops.from + (cops.to - cops.from) * (1 - Math.pow(1 - t, 3));
+    // Последняя половина пути — дрифт: разворот на 180° и занос чуть дальше точки остановки
+    const u = Math.min(1, Math.max(0, (t - 0.42) / 0.5));
+    cops.yaw = Math.cos(Math.PI * u);
+    cops.carX = base + Math.sin(Math.PI * u) * 7;
+    if (u > 0 && u < 1) {
+      const left = cops.carX + 6, right = cops.carX + CAR_W - 7;
+      puff(left); puff(right);
+      cops.skids.push({ x: left, a: 1 }, { x: left + 1, a: 1 }, { x: right, a: 1 });
+    }
+    if (t === 1) { cops.phase = "parked"; cops.t0 = now; cops.yaw = -1; }
+  } else if (cops.phase === "parked") {
+    cops.out = Math.min(1, (now - cops.t0) / 600);
+  } else if (cops.phase === "boarding") {
+    cops.out = Math.max(0, 1 - (now - cops.t0) / 400);
+    if (!cops.out) { cops.phase = "leaving"; cops.t0 = now; cops.from = cops.carX; }
+  } else if (cops.phase === "leaving") {
+    const t = Math.min(1, (now - cops.t0) / 1100);
+    cops.carX = cops.from + (-CAR_W - 4 - cops.from) * t * t;
+    if (t > 0.05 && t < 0.4) puff(cops.carX + CAR_W - 6);   // пробуксовка на старте
+    if (t === 1) { cops.phase = "away"; cops.skids = []; }
+  }
+  for (const pf of cops.smoke) { pf.x += pf.vx; pf.y += pf.vy; pf.s += 0.08; pf.life -= 0.035; }
+  cops.smoke = cops.smoke.filter(pf => pf.life > 0);
+  for (const m of cops.skids) m.a = Math.max(0.15, m.a - 0.004);
+}
+
+let copsRunning = false, copsLast = 0;
+function copsLoop(now) {
+  const moving = cops.phase !== "parked" || cops.out < 1 || cops.smoke.length > 0;
+  if (now - copsLast >= (moving ? 33 : 125)) { copsStep(now); drawCops(now); copsLast = now; }
+  if (cops.phase === "away" && !cops.smoke.length) { copsRunning = false; return; }
+  requestAnimationFrame(copsLoop);
+}
+
+function setCops(want) {
+  if (want === cops.want) return;
+  cops.want = want;
+  document.querySelector("header").classList.toggle("alarm", want);
+  const now = performance.now();
+  if (reducedMotion) {
+    Object.assign(cops, { phase: want ? "parked" : "away", carX: copsTarget(), out: want ? 1 : 0, yaw: -1 });
+    drawCops(now);
+    return;
+  }
+  if (want) {
+    if (cops.phase === "away" || cops.phase === "leaving")
+      Object.assign(cops, { phase: "arriving", t0: now, from: cops.phase === "away" ? -CAR_W : cops.carX,
+                            to: copsTarget(), yaw: 1, skids: [] });
+    else if (cops.phase === "boarding")
+      Object.assign(cops, { phase: "parked", t0: now - cops.out * 600 });
+  } else {
+    if (cops.phase === "parked") Object.assign(cops, { phase: "boarding", t0: now - (1 - cops.out) * 400 });
+    else if (cops.phase === "arriving") Object.assign(cops, { phase: "leaving", t0: now, from: cops.carX, yaw: -1 });
+  }
+  if (!copsRunning) { copsRunning = true; requestAnimationFrame(copsLoop); }
+}
+
+// Ширина холста подстраивается под свободное место в шапке; стоящая машина остаётся у правого края
+new ResizeObserver(() => {
+  copsCanvas.width = Math.max(60, Math.floor(copsCanvas.clientWidth / 3));
+  copsCanvas.height = COPS_H;
+  if (cops.phase === "parked") cops.carX = copsTarget();
+  if (cops.phase === "arriving") cops.to = copsTarget();
+  drawCops(performance.now());
+}).observe(copsCanvas);
+
+let heroFrame = 0;
+function heroLoop(ts) {
+  if (ts - heroFrame > 80) { drawHero(ts / 1000); heroFrame = ts; }
+  requestAnimationFrame(heroLoop);
+}
+
+/* ═════════════ Пиксельный фон: ночное небо, звёзды, луна, облака и горы ═════════════ */
+/* Один пиксель фона = 4×4 пикселя экрана. Небо, луна и горы рисуются один раз в отдельные слои,
+   а каждый кадр поверх неба рисуются только мерцающие звёзды, облака и падающая звезда. */
+const BG_PX = 4;
+const bgCanvas = document.getElementById("bg"), bgCtx = bgCanvas.getContext("2d");
+let bgW = 0, bgH = 0, bgSky, bgHills, bgStars = [], bgClouds = [], bgMoon, shooting = null;
+
+/* Генератор псевдослучайных чисел с зерном — сцена одинаковая при каждой загрузке */
+function rng(seed) {
+  return () => {
+    seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function bgLayer(draw) {
+  const c = document.createElement("canvas");
+  c.width = bgW; c.height = bgH;
+  draw(c.getContext("2d"));
+  return c;
+}
+
+function buildBackground() {
+  bgW = bgCanvas.width = Math.ceil(innerWidth / BG_PX);
+  bgH = bgCanvas.height = Math.ceil(innerHeight / BG_PX);
+  const rand = rng(7);
+  bgMoon = { x: Math.round(bgW * 0.82), y: Math.round(Math.min(bgH * 0.17, 40)), r: 9 };
+
+  /* Небо: полосы цвета от тёмного к сиреневому у горизонта, на стыках — шахматный дизеринг */
+  const SKY = ["#0a0820", "#100c2c", "#171138", "#1f1546", "#291a54", "#341f60", "#41256b", "#4f2c74"];
+  bgSky = bgLayer(g => {
+    const band = bgH * 0.78 / SKY.length;
+    for (let y = 0; y < bgH; y++) {
+      const f = y / band, i = Math.min(SKY.length - 1, Math.floor(f));
+      const next = SKY[Math.min(SKY.length - 1, i + 1)];
+      g.fillStyle = SKY[i];
+      g.fillRect(0, y, bgW, 1);
+      if (f - i > 0.6) {
+        g.fillStyle = next;
+        for (let x = (y % 2); x < bgW; x += 2) g.fillRect(x, y, 1, 1);
+      }
+    }
+    // Луна: ореол из дизеринга, тень справа и кратеры
+    const m = bgMoon;
+    for (let dy = -m.r - 7; dy <= m.r + 7; dy++) for (let dx = -m.r - 7; dx <= m.r + 7; dx++) {
+      const d = Math.hypot(dx, dy), x = m.x + dx, y = m.y + dy;
+      if (d < m.r) {
+        const crater = [[-3, -2, 2.2], [3, 3, 1.6], [-2, 4, 1.1], [4, -3, 1]].some(([cx, cy, cr]) => Math.hypot(dx - cx, dy - cy) < cr);
+        g.fillStyle = crater ? "#c9c0f2" : (dx + dy > m.r * 0.55 ? "#cfc6f5" : "#efeaff");
+        g.fillRect(x, y, 1, 1);
+      } else if (d < m.r + 3 && (x + y) % 2 === 0) { g.fillStyle = "#6a4fa0"; g.fillRect(x, y, 1, 1); }
+      else if (d < m.r + 7 && (x + y) % 4 === 0) { g.fillStyle = "#4a3384"; g.fillRect(x, y, 1, 1); }
+    }
+  });
+
+  /* Горы: три слоя силуэтов (дальние светлее), у вершин — подсветка от луны; на ближнем холме ёлочки */
+  const ridge = (base, amp, seed, freq) => {
+    const r = rng(seed), p = [r() * 6.3, r() * 6.3, r() * 6.3];
+    return x => base + amp * (0.55 * Math.sin(x * freq + p[0]) + 0.3 * Math.sin(x * freq * 2.3 + p[1]) + 0.15 * Math.sin(x * freq * 5.3 + p[2]));
+  };
+  const LAYERS = [
+    { base: 0.66, amp: 0.10, seed: 11, freq: 0.035, fill: "#2a1d58", rim: "#4a3488" },
+    { base: 0.76, amp: 0.07, seed: 23, freq: 0.055, fill: "#1c1442", rim: "#30236a" },
+    { base: 0.88, amp: 0.04, seed: 37, freq: 0.09,  fill: "#100b28", rim: "#1d1645" },
+  ];
+  bgHills = bgLayer(g => {
+    for (const L of LAYERS) {
+      const h = ridge(L.base * bgH, L.amp * bgH, L.seed, L.freq);
+      for (let x = 0; x < bgW; x++) {
+        const top = Math.round(h(x));
+        g.fillStyle = L.fill; g.fillRect(x, top, 1, bgH - top);
+        g.fillStyle = L.rim;  g.fillRect(x, top, 1, 1);
+      }
+      if (L === LAYERS[2]) {
+        const tr = rng(51);
+        for (let x = 2; x < bgW - 2; x += 3 + Math.floor(tr() * 7)) {
+          const top = Math.round(h(x)), tall = 4 + Math.floor(tr() * 3);
+          g.fillStyle = "#0a0720";
+          for (let j = 0; j < tall; j++) {
+            const half = Math.floor((j + 1) / 2);
+            g.fillRect(x - half, top - tall + j, half * 2 + 1, 1);
+          }
+          g.fillRect(x, top, 1, 2);
+        }
+      }
+    }
+  });
+
+  /* Звёзды — только в небе и не на луне; часть звёзд крупные, «крестиком» */
+  bgStars = [];
+  const count = Math.round(bgW * bgH / 160);
+  for (let i = 0; i < count; i++) {
+    const x = Math.floor(rand() * bgW), y = Math.floor(rand() * bgH * 0.62);
+    if (Math.hypot(x - bgMoon.x, y - bgMoon.y) < bgMoon.r + 8) continue;
+    bgStars.push({ x, y, big: rand() < 0.07, ph: rand() * 6.3, sp: 0.6 + rand() * 2.2 });
+  }
+  bgClouds = Array.from({ length: Math.max(3, Math.round(bgW / 70)) }, () => ({
+    x: rand() * bgW, y: Math.round(bgH * (0.12 + rand() * 0.35)), w: 14 + Math.floor(rand() * 18), sp: 0.4 + rand() * 0.8,
+  }));
+}
+
+function drawCloud(c) {
+  const x = Math.round(c.x), w = c.w;
+  bgCtx.fillStyle = "rgba(150, 125, 230, .16)";
+  bgCtx.fillRect(x, c.y + 2, w, 3);
+  bgCtx.fillRect(x + 3, c.y + 1, Math.round(w * 0.55), 1);
+  bgCtx.fillRect(x + Math.round(w * 0.25), c.y, Math.round(w * 0.3), 1);
+  bgCtx.fillStyle = "rgba(200, 185, 255, .14)";
+  bgCtx.fillRect(x + Math.round(w * 0.25), c.y, Math.round(w * 0.3), 1);
+}
+
+let bgLast = 0;
+function drawBackground(t) {
+  const dt = bgLast ? Math.min(t - bgLast, 0.5) : 0;
+  bgLast = t;
+  bgCtx.drawImage(bgSky, 0, 0);
+
+  for (const s of bgStars) {
+    const b = 0.5 + 0.5 * Math.sin(t * s.sp + s.ph);
+    bgCtx.fillStyle = `rgba(255, 250, 235, ${0.25 + 0.75 * b})`;
+    bgCtx.fillRect(s.x, s.y, 1, 1);
+    if (s.big && b > 0.35) {
+      bgCtx.fillStyle = `rgba(190, 180, 255, ${0.6 * b})`;
+      bgCtx.fillRect(s.x - 1, s.y, 1, 1); bgCtx.fillRect(s.x + 1, s.y, 1, 1);
+      bgCtx.fillRect(s.x, s.y - 1, 1, 1); bgCtx.fillRect(s.x, s.y + 1, 1, 1);
+    }
+  }
+
+  for (const c of bgClouds) {
+    c.x += c.sp * dt;
+    if (c.x > bgW) c.x = -c.w;
+    drawCloud(c);
+  }
+
+  // Падающая звезда раз в несколько секунд: летит вниз-влево и оставляет гаснущий хвост
+  if (!shooting && Math.random() < dt / 7) {
+    shooting = { x: bgW * (0.3 + Math.random() * 0.6), y: Math.random() * bgH * 0.25, life: 0 };
+  }
+  if (shooting) {
+    shooting.life += dt;
+    const p = shooting.life * 60;
+    for (let i = 0; i < 8; i++) {
+      bgCtx.fillStyle = `rgba(255, 255, 255, ${(1 - i / 8) * (1 - shooting.life)})`;
+      bgCtx.fillRect(Math.round(shooting.x - p + i), Math.round(shooting.y + (p - i) * 0.5), 1, 1);
+    }
+    if (shooting.life > 1) shooting = null;
+  }
+
+  bgCtx.drawImage(bgHills, 0, 0);
+}
+
+let bgFrame = 0;
+function bgLoop(ts) {
+  if (ts - bgFrame > 100) { drawBackground(ts / 1000); bgFrame = ts; }
+  requestAnimationFrame(bgLoop);
+}
+let bgResize;
+addEventListener("resize", () => {
+  clearTimeout(bgResize);
+  bgResize = setTimeout(() => { buildBackground(); drawBackground(performance.now() / 1000); }, 150);
+});
+const rarityOf = name => RARITY[ITEM_BY_NAME[name]?.rarity || "common"];
+
+/* ═════════════════════════════ Блокчейн ═════════════════════════════ */
+const DIFFICULTY = 4;
+const TARGET = "0".repeat(DIFFICULTY);
+const OPS = { GENESIS: "GENESIS", REGISTER: "REGISTER_USER", UPDATE: "UPDATE_USER",
+              ADD_ITEM: "ADD_ITEM", TRANSFER: "TRANSFER_ITEM" };
+const EDITABLE = ["nickname", "email", "level", "gold"];
+const FIELD_NAMES = { nickname: "никнейм", email: "email", level: "уровень", gold: "золото", items: "предметы" };
+
+const header = b => ({ index: b.index, timestamp: b.timestamp, operation: b.operation,
+                       data: b.data, prev_hash: b.prev_hash, nonce: b.nonce });
+const blockHash = b => sha256(canonical(header(b)));
+const recordHash = u => sha256(canonical(u));
+const clone = o => JSON.parse(JSON.stringify(o));
+
+function now() {
+  const d = new Date(), p = x => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+
+/* Proof-of-Work: подбираем nonce, пока хеш не начнётся с нужного числа нулей.
+   Канонический JSON блока делится на части до и после значения nonce — меняется только оно. */
+function splitHeader(block) {
+  block.nonce = 0;
+  const s = canonical(header(block)), at = s.lastIndexOf('"nonce":0');
+  return [s.slice(0, at + 8), s.slice(at + 9)];
+}
+
+function mine(block) {
+  const [pre, post] = splitHeader(block);
+  Object.assign(block, findNonce(pre, post, DIFFICULTY));
+}
+
+/* Майнинг в фоновом потоке (Web Worker): страница не замирает, анимации идут.
+   Код потока собирается из тех же функций SHA-256; если поток недоступен — майним как раньше. */
+let miner = null;
+function mineAsync(block, onProgress) {
+  const [pre, post] = splitHeader(block);
+  if (miner === null) {
+    try {
+      const src = [
+        `const K = new Uint32Array(${JSON.stringify(Array.from(K))});`,
+        `const H0 = new Uint32Array(${JSON.stringify(Array.from(H0))});`,
+        "const W = new Uint32Array(64), encoder = new TextEncoder();",
+        sha256Blocks, sha256Finish, `const toHex = ${toHex};`, findNonce,
+        "onmessage = e => postMessage({ result: findNonce(e.data.pre, e.data.post, e.data.difficulty, n => postMessage({ progress: n })) });",
+      ].join("\n");
+      miner = new Worker(URL.createObjectURL(new Blob([src], { type: "text/javascript" })));
+    } catch (e) { miner = false; }
+  }
+  if (!miner) { mine(block); return Promise.resolve(); }
+  return new Promise(resolve => {
+    miner.onmessage = e => {
+      if (e.data.progress !== undefined) onProgress?.(e.data.progress);
+      else { Object.assign(block, e.data.result); resolve(); }
+    };
+    miner.onerror = e => { e.preventDefault(); miner.terminate(); miner = false; mine(block); resolve(); };
+    miner.postMessage({ pre, post, difficulty: DIFFICULTY });
+  });
+}
+
+let state, good;   // state — текущие данные; good — последнее «честное» состояние
+
+/* Genesis-блок «зашит» в код заранее (как в биткоине): nonce уже найден, поэтому при сбросе
+   ничего не нужно майнить. Хеш проверяется так же, как у любого другого блока. */
+const GENESIS = { index: 0, timestamp: "2026-01-01 00:00:00", operation: OPS.GENESIS,
+                  data: { message: "GameChain genesis block" }, prev_hash: "0".repeat(64), nonce: 215447,
+                  hash: "0000ea9c4a5c73924700a9d9cf79da81a239a65cae955bb4c1b98a8ae842b770" };
+
+function freshState() {
+  return { users: {}, blockchain: [clone(GENESIS)] };
+}
+
+const tick = () => new Promise(r => setTimeout(r, 30));
+let lastAdded = -1;
+
+async function addBlock(operation, data) {
+  const chain = state.blockchain;
+  const block = { index: chain.length, timestamp: now(), operation, data,
+                  prev_hash: chain[chain.length - 1].hash, nonce: 0 };
+  setMining(`⛏ Майнинг блока #${block.index}…`);
+  const t0 = performance.now();
+  await mineAsync(block, n => setMining(`⛏ Майнинг блока #${block.index}… перебрано ${n.toLocaleString("ru-RU")} вариантов`));
+  chain.push(block);
+  lastAdded = block.index;
+  setMining(`✔ Блок #${block.index} добыт за ${((performance.now() - t0) / 1000).toFixed(2)} с, nonce = ${block.nonce}`);
+  good = clone(state);
+  save();
+  render();
+  await tick();
+}
+
+/* ─────────── Операции GameChain ─────────── */
+function getUser(name) {
+  const u = state.users[name];
+  if (!u) throw new Error(`Пользователь «${name}» не найден`);
+  return u;
+}
+
+async function register(username, nickname, email, password) {
+  requireIntegrity("регистрация");
+  if (state.users[username]) throw new Error(`Пользователь «${username}» уже существует`);
+  const salt = sha256(username + Date.now()).slice(0, 16);
+  const user = { username, nickname, email, salt, password_hash: sha256(salt + password),
+                 level: 1, gold: 100, items: [] };
+  state.users[username] = user;
+  await addBlock(OPS.REGISTER, { username, user: clone(user), record_hash: recordHash(user) });
+}
+
+async function updateUser(username, field, value) {
+  requireIntegrity("изменение профиля");
+  const u = getUser(username);
+  if (field === "level" || field === "gold") {
+    value = parseInt(value, 10);
+    if (Number.isNaN(value)) throw new Error("Нужно целое число");
+  }
+  const old = u[field];
+  u[field] = value;
+  await addBlock(OPS.UPDATE, { username, field, old, new: value, record_hash: recordHash(u) });
+}
+
+async function addItem(username, item) {
+  requireIntegrity("выдача предмета");
+  const u = getUser(username);
+  u.items.push(item);
+  await addBlock(OPS.ADD_ITEM, { username, item, record_hash: recordHash(u) });
+}
+
+async function transfer(from, to, item) {
+  requireIntegrity("передача предмета");
+  const s = getUser(from), r = getUser(to);
+  if (from === to) throw new Error("Нельзя передать предмет самому себе");
+  const i = s.items.indexOf(item);
+  if (i < 0) throw new Error(`У игрока ${from} нет предмета «${item}»`);
+  s.items.splice(i, 1);
+  r.items.push(item);
+  await addBlock(OPS.TRANSFER, { from, to, item, from_hash: recordHash(s), to_hash: recordHash(r) });
+}
+
+/* ─────────── Проверка целостности ─────────── */
+/* Восстанавливает учётные записи по истории блоков и сверяет каждый блок с восстановленным состоянием:
+   • отпечаток записи в блоке должен совпадать с хешем записи после применения блока —
+     иначе блок создан на основе подменённых данных («отмывание» взлома);
+   • операция должна быть возможной — нельзя передать предмет, которого у игрока по истории не было. */
+function replay(chain) {
+  const users = {}, problems = [], tainted = new Set();
+  // Для каждой учётной записи сообщаем только о первом расхождении:
+  // все последующие блоки этой записи построены на тех же подменённых данных
+  const check = (i, b, name, recorded) => {
+    if (tainted.has(name) || recorded === recordHash(users[name])) return;
+    tainted.add(name);
+    problems.push({ i, kind: "state", text: `Блок #${i} (${b.operation}): отпечаток «${name}» не совпадает с восстановленным состоянием — блок создан на основе подменённых данных` });
+  };
+  const need = name => {
+    if (!users[name]) throw new Error(`пользователь «${name}» не зарегистрирован`);
+    return users[name];
+  };
+  chain.slice(1).forEach((b, k) => {
+    const i = k + 1, d = b.data;
+    try {
+      if (b.operation === OPS.REGISTER) {
+        if (users[d.username]) throw new Error(`пользователь «${d.username}» уже зарегистрирован`);
+        users[d.username] = clone(d.user);
+        check(i, b, d.username, d.record_hash);
+      } else if (b.operation === OPS.UPDATE) {
+        const u = need(d.username);
+        if (!tainted.has(d.username) && canonical(u[d.field]) !== canonical(d.old))
+          throw new Error(`в блоке старое значение ${FIELD_NAMES[d.field] || d.field} = ${fmt(d.old)}, а по истории ${fmt(u[d.field])}`);
+        u[d.field] = d.new;
+        check(i, b, d.username, d.record_hash);
+      } else if (b.operation === OPS.ADD_ITEM) {
+        need(d.username).items.push(d.item);
+        check(i, b, d.username, d.record_hash);
+      } else if (b.operation === OPS.TRANSFER) {
+        const s = need(d.from), r = need(d.to), at = s.items.indexOf(d.item);
+        if (at < 0) throw new Error(`у игрока ${d.from} не было предмета «${d.item}»`);
+        s.items.splice(at, 1);
+        r.items.push(d.item);
+        check(i, b, d.from, d.from_hash);
+        check(i, b, d.to, d.to_hash);
+      }
+    } catch (e) {
+      problems.push({ i, kind: "impossible", text: `Блок #${i} (${b.operation}): невозможная операция — ${e.message}` });
+    }
+  });
+  return { users, problems };
+}
+
+/* Полная проверка: сама цепочка, каждый блок по восстановленному состоянию и соответствие базы блокчейну.
+   firstBad — номер первого испорченного блока (с него начинается откат при восстановлении). */
+function verify() {
+  const chain = state.blockchain;
+  const problems = [];
+  const blocks = chain.map(() => ({}));
+  const users = {};
+  let firstBad = null;
+  const markBad = i => { if (firstBad === null || i < firstBad) firstBad = i; };
+
+  chain.forEach((b, i) => {
+    const real = blockHash(b);
+    blocks[i].real = real;
+    if (real !== b.hash) {
+      blocks[i].hashBad = true; markBad(i);
+      problems.push(`Блок #${i} (${b.operation}): содержимое изменено — записан хеш ${b.hash}, а фактический ${real}`);
+    } else if (!b.hash.startsWith(TARGET)) {
+      blocks[i].powBad = true; markBad(i);
+      problems.push(`Блок #${i} (${b.operation}): хеш пересчитан без Proof-of-Work (не начинается с ${TARGET})`);
+    }
+    if (i > 0 && b.prev_hash !== chain[i - 1].hash) {
+      blocks[i].linkBad = true; markBad(i);
+      problems.push(`Блок #${i}: разрыв цепочки — prev_hash ≠ хешу блока #${i - 1}`);
+    }
+  });
+
+  if (!problems.length) {
+    const r = replay(chain);
+    for (const p of r.problems) { blocks[p.i][p.kind] = true; markBad(p.i); problems.push(p.text); }
+    for (const name of new Set([...Object.keys(state.users), ...Object.keys(r.users)])) {
+      const exp = r.users[name], cur = state.users[name];
+      if (!exp) {
+        users[name] = { bad: true };
+        problems.push(`Учётная запись «${name}» есть в базе, но не зарегистрирована в блокчейне`);
+      } else if (!cur) {
+        problems.push(`Учётная запись «${name}» удалена из базы, хотя есть в блокчейне`);
+      } else if (recordHash(cur) !== recordHash(exp)) {
+        const fields = Object.keys(exp)
+          .filter(k => canonical(cur[k]) !== canonical(exp[k]))
+          .map(k => ({ k, db: cur[k], bc: exp[k] }));
+        users[name] = { bad: true, fields, expected: recordHash(exp), actual: recordHash(cur) };
+        problems.push(`Учётная запись «${name}» подменена: SHA-256 записи ≠ восстановленной по блокчейну (` +
+          fields.map(f => `${FIELD_NAMES[f.k] || f.k}: в базе ${fmt(f.db)}, по блокчейну ${fmt(f.bc)}`).join("; ") + ")");
+      }
+    }
+  }
+  return { problems, blocks, users, firstBad };
+}
+
+/* Пока есть нарушения, новые операции запрещены — иначе они «отмоют» подменённые данные */
+function requireIntegrity(action) {
+  const n = verify().problems.length;
+  if (!n) return;
+  logEvent("blocked", `Операция «${action}» отклонена: в системе есть нарушения целостности (${n})`);
+  throw new Error(`Операция заблокирована: обнаружены нарушения (${n}). Сначала нажмите «Откатить взлом».`);
+}
+
+const fmt = v => Array.isArray(v) ? `[${v.join(", ") || "пусто"}]` : JSON.stringify(v);
+
+/* ═════════════════════════════ Интерфейс ═════════════════════════════ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const hacking = new Set();
+
+function describe(b) {
+  const d = b.data || {};
+  try {
+    switch (b.operation) {
+      case OPS.GENESIS: return "Первый блок цепочки";
+      case OPS.REGISTER: return `Регистрация <b>${esc(d.user.username)}</b> (${esc(d.user.nickname)})`;
+      case OPS.UPDATE: return `<b>${esc(d.username)}</b>: ${FIELD_NAMES[d.field] || esc(d.field)} ${esc(fmt(d.old))} → ${esc(fmt(d.new))}`;
+      case OPS.ADD_ITEM: return `<b>${esc(d.username)}</b> получил ${itemImg(d.item, "mini")}«${esc(d.item)}»`;
+      case OPS.TRANSFER: return `${itemImg(d.item, "mini")}«${esc(d.item)}»: <b>${esc(d.from)}</b> → <b>${esc(d.to)}</b>`;
+    }
+  } catch (e) {}
+  return esc(JSON.stringify(d));
+}
+
+const itemImg = (name, cls = "") => `<img class="${cls}" src="${spriteURL(name)}" alt="">`;
+
+function slotAttrs(name) {
+  const r = rarityOf(name);
+  return `data-name="${esc(name)}" style="--r:${r.color}" title="${esc(name)} — ${r.name}"`;
+}
+
+/* Инвентарь: одинаковые предметы складываются в стопку, минимум 10 ячеек */
+function inventoryHtml(items) {
+  const stacks = [];
+  for (const name of items) {
+    const s = stacks.find(x => x.name === name);
+    s ? s.n++ : stacks.push({ name, n: 1 });
+  }
+  const slots = Math.max(10, Math.ceil(stacks.length / 5) * 5);
+  return `<div class="inv">${Array.from({ length: slots }, (_, i) => {
+    const s = stacks[i];
+    return s ? `<div class="slot" ${slotAttrs(s.name)}>${itemImg(s.name)}${s.n > 1 ? `<span class="cnt">${s.n}</span>` : ""}</div>`
+             : '<div class="slot"></div>';
+  }).join("")}</div>`;
+}
+
+function pickerHtml(names, selected) {
+  return names.map(n =>
+    `<button type="button" class="slot pick ${n === selected ? "sel" : ""}" data-pick="${esc(n)}" ${slotAttrs(n)}>${itemImg(n)}</button>`
+  ).join("");
+}
+
+function pickedHtml(name, empty) {
+  if (!name) return empty;
+  const r = rarityOf(name);
+  return `<b style="color:${r.color}">${esc(name)}</b> · ${r.name}`;
+}
+
+/* Посимвольное сравнение хешей: actual показывается с подсветкой символов, отличающихся от expected.
+   Наглядно показывает лавинный эффект — меняется почти весь хеш. */
+function hashDiff(expected, actual) {
+  let n = 0;
+  const html = [...actual].map((ch, i) => ch === expected[i] ? `<span class="hs">${ch}</span>` : (n++, `<span class="hd">${ch}</span>`)).join("");
+  return { html, n, note: `изменилось ${n} из ${actual.length} символов — лавинный эффект` };
+}
+
+function hashHtml(h) {
+  const z = h.match(/^0*/)[0];
+  return `<span class="zeros">${z}</span>${h.slice(z.length)}`;
+}
+
+function render() {
+  const v = verify();
+
+  // Блокировка операций
+  $("#lock-note").hidden = !v.problems.length;
+  $("#ops-panel").classList.toggle("locked", v.problems.length > 0);
+
+  setCops(v.problems.length > 0);
+
+  // Статус
+  const st = $("#status");
+  st.className = "status " + (v.problems.length ? "bad" : "ok");
+  st.textContent = v.problems.length ? `✘ Обнаружено нарушений: ${v.problems.length}` : "✔ Цепочка цела";
+
+  // Отчёт
+  $("#report").innerHTML = v.problems.length
+    ? `<ul>${v.problems.map(p => `<li>${esc(p)}</li>`).join("")}</ul>`
+    : `<div class="good">✔ Все ${state.blockchain.length} блоков корректны, учётные записи совпадают с блокчейном</div>`;
+
+  // Игроки
+  const names = Object.keys(state.users);
+  $("#players").innerHTML = names.length ? names.map(n => {
+    const u = state.users[n], bad = v.users[n]?.bad;
+    const diff = v.users[n]?.fields?.map(f =>
+      `<div>⚠ ${FIELD_NAMES[f.k] || esc(f.k)}: в блокчейне ${esc(fmt(f.bc))}</div>`).join("") || "";
+    return `<div class="player ${bad ? "bad" : ""} ${hacking.has(n) ? "hacking" : ""}" data-user="${esc(n)}">
+      <div class="top">
+        <div class="avatar">${esc(u.nickname?.[0] || "?").toUpperCase()}</div>
+        <div><div class="name">${esc(u.nickname)} <span class="hash">@${esc(n)}</span></div>
+          <div class="mail">${esc(u.email)}</div></div>
+        <button class="btn danger small-btn" data-hack="${esc(n)}">${hacking.has(n) ? "Готово" : "Взломать"}</button>
+      </div>
+      <div class="stats"><span>⭐ Уровень ${esc(u.level)}</span><span>🪙 ${esc(u.gold)}</span></div>
+      ${inventoryHtml(u.items || [])}
+      ${v.users[n]?.expected ? (() => {
+        const d = hashDiff(v.users[n].expected, v.users[n].actual);
+        return `<div class="hash">SHA-256 по блокчейну: <span class="hok">${v.users[n].expected}</span></div>
+          <div class="hash">SHA-256 сейчас: ${d.html}</div><div class="hash-note">${d.note}</div>`;
+      })() : `<div class="hash">SHA-256 записи: <b>${recordHash(u)}</b></div>`}
+      <div class="hash">хэш: ${esc(u.password_hash)}</div>
+      ${diff ? `<div class="diff">${diff}</div>` : ""}
+      <div class="hack">
+        <div class="lbl">Прямое изменение базы данных — в обход блокчейна</div>
+        ${["nickname", "email", "level", "gold"].map(f =>
+          `<label>${FIELD_NAMES[f]}</label><input data-field="${f}" value="${esc(u[f])}">`).join("")}
+        <label>предметы (через запятую)</label><input data-field="items" value="${esc((u.items || []).join(", "))}">
+        <button class="btn danger" data-del="${esc(n)}">Удалить учётную запись</button>
+      </div>
+    </div>`;
+  }).join("") : `<div class="empty">Пользователей пока нет. Зарегистрируйте игрока или нажмите «Демо-данные».</div>`;
+
+  // Блокчейн
+  $("#chain").innerHTML = state.blockchain.map((b, i) => {
+    const s = v.blocks[i], bad = s.hashBad || s.powBad || s.state || s.impossible;
+    const link = i ? `<div class="link ${s.linkBad ? "broken" : ""}" title="${s.linkBad ? "prev_hash не совпадает" : "связь в порядке"}">${s.linkBad ? "✕" : "➜"}</div>` : "";
+    return `${link}<div class="block ${bad ? "bad" : ""} ${i === lastAdded ? "new" : ""}" data-block="${i}">
+      <div class="bh"><span class="idx">#${i}</span><span class="op ${esc(b.operation)}">${esc(b.operation)}</span></div>
+      <div class="desc">${describe(b)}</div>
+      <div class="kv ${s.linkBad ? "err" : ""}">prev: <span>${b.prev_hash}</span></div>
+      <div class="kv">hash: <span>${hashHtml(b.hash)}</span></div>
+      ${s.hashBad ? (() => { const d = hashDiff(b.hash, s.real);
+        return `<div class="kv">по содержимому: <span>${d.html}</span></div><div class="hash-note">${d.note}</div>`; })() : ""}
+      ${s.linkBad ? (() => { const d = hashDiff(b.prev_hash, state.blockchain[i - 1].hash);
+        return `<div class="kv">хеш блока #${i - 1} сейчас: <span>${d.html}</span></div><div class="hash-note">${d.note}</div>`; })() : ""}
+      <div class="kv">nonce: <span>${b.nonce}</span> · ${esc(b.timestamp)}</div>
+      ${s.hashBad ? '<div class="flag">✘ Данные блока изменены</div>' : ""}
+      ${s.powBad ? '<div class="flag">✘ Нет Proof-of-Work</div>' : ""}
+      ${s.linkBad ? '<div class="flag">✘ Разрыв связи с блоком #' + (i - 1) + "</div>" : ""}
+      ${s.state ? '<div class="flag">✘ Основан на подменённых данных</div>' : ""}
+      ${s.impossible ? '<div class="flag">✘ Невозможная операция</div>' : ""}
+    </div>`;
+  }).join("");
+  if (lastAdded >= 0) { const c = $("#chain"); c.scrollLeft = c.scrollWidth; lastAdded = -1; }
+
+  renderSelects();
+}
+
+function renderSelects() {
+  const names = Object.keys(state.users);
+  document.querySelectorAll(".user-select").forEach(sel => {
+    const cur = sel.value;
+    sel.innerHTML = names.map(n => `<option value="${esc(n)}">${esc(state.users[n].nickname)} (@${esc(n)})</option>`).join("")
+      || '<option value="">— нет игроков —</option>';
+    if (names.includes(cur)) sel.value = cur;
+  });
+  const to = $('#f-tr [name="to"]'), from = $('#f-tr [name="from"]');
+  if (to.value === from.value && names.length > 1) to.value = names.find(n => n !== from.value);
+  const items = [...new Set(state.users[from.value]?.items || [])];
+  const input = $("#tr-item");
+  if (!items.includes(input.value)) input.value = "";
+  $("#tr-picker").innerHTML = pickerHtml(items, input.value);
+  $("#tr-picked").innerHTML = pickedHtml(input.value, items.length ? "Выберите предмет из инвентаря" : "У игрока нет предметов");
+}
+
+/* Клик по ячейке выбирает предмет и записывает его название в скрытое поле формы */
+function bindPicker(pickerSel, inputSel, labelSel, empty) {
+  $(pickerSel).addEventListener("click", e => {
+    const b = e.target.closest("[data-pick]");
+    if (!b) return;
+    $(inputSel).value = b.dataset.pick;
+    $(pickerSel).querySelectorAll(".sel").forEach(x => x.classList.remove("sel"));
+    b.classList.add("sel");
+    $(labelSel).innerHTML = pickedHtml(b.dataset.pick, empty);
+  });
+}
+
+function setMining(t) { $("#mining").textContent = t; }
+
+let toastTimer;
+function toast(msg, err) {
+  const t = $("#toast");
+  t.textContent = msg;
+  t.className = "toast show" + (err ? " err" : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = "toast" + (err ? " err" : ""), 3200);
+}
+
+/* ─────────── Журнал событий безопасности ─────────── */
+const LOG_TAGS = { attack: "АТАКА", detect: "ОБНАРУЖЕНО", clean: "ПРОВЕРКА OK", restore: "ОТКАТ", system: "СИСТЕМА",
+                   blocked: "ЗАБЛОКИРОВАНО" };
+let secLog = [], logFresh = false;
+
+function logEvent(type, text, details = []) {
+  secLog.unshift({ time: now(), type, text, details });
+  secLog = secLog.slice(0, 200);
+  logFresh = true;
+  save();
+  renderLog();
+}
+
+function renderLog() {
+  $("#log").innerHTML = secLog.length ? secLog.map((e, i) => `
+    <div class="ev ${e.type} ${i === 0 && logFresh ? "new" : ""}">
+      <time title="${esc(e.time)}">${esc(e.time.slice(11))}</time>
+      <span class="tag">${LOG_TAGS[e.type]}</span>
+      <div>${esc(e.text)}${e.details.length ? `<ul>${e.details.map(d => `<li>${esc(d)}</li>`).join("")}</ul>` : ""}</div>
+    </div>`).join("") : '<div class="empty">Событий пока нет</div>';
+  logFresh = false;
+}
+
+/* Разница двух объектов в виде строк «путь: было → стало» */
+function flatten(v, path = "", out = {}) {
+  if (v && typeof v === "object" && !Array.isArray(v)) {
+    for (const k of Object.keys(v)) flatten(v[k], path ? `${path}.${k}` : k, out);
+  } else out[path] = v;
+  return out;
+}
+function diffData(before, after) {
+  const a = flatten(before), b = flatten(after);
+  return [...new Set([...Object.keys(a), ...Object.keys(b)])]
+    .filter(k => canonical(a[k]) !== canonical(b[k]))
+    .map(k => `${k}: ${a[k] === undefined ? "—" : fmt(a[k])} → ${b[k] === undefined ? "удалено" : fmt(b[k])}`);
+}
+
+function save() {
+  try { localStorage.setItem("gamechain", JSON.stringify({ state, good, secLog })); } catch (e) {}
+}
+
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem("gamechain"));
+    if (Array.isArray(raw?.secLog)) secLog = raw.secLog;
+    if (raw?.state?.blockchain) { state = raw.state; good = raw.good || clone(state); return; }
+  } catch (e) {}
+  state = freshState();
+  good = clone(state);
+}
+
+/* ─────────── Обработчики ─────────── */
+let busy = false;
+async function run(fn) {
+  if (busy) return;
+  busy = true;
+  document.querySelectorAll("button").forEach(b => b.disabled = true);
+  try { await fn(); }
+  catch (e) { toast(e.message, true); }
+  finally { busy = false; document.querySelectorAll("button").forEach(b => b.disabled = false); }
+}
+
+/* «Жидкая» плашка вкладок: перелетает со старой вкладки на новую, как капля */
+const tabBlob = document.createElement("div");
+tabBlob.className = "tab-blob";
+$(".tabs").prepend(tabBlob);
+const tabRect = t => ({ l: t.offsetLeft, t: t.offsetTop, w: t.offsetWidth, h: t.offsetHeight });
+const placeBlob = r => Object.assign(tabBlob.style,
+  { left: r.l + "px", top: r.t + "px", width: r.w + "px", height: r.h + "px" });
+let blobAnim;
+
+/* Капля сразу ставится на новую вкладку, а путь показывается только через transform (сдвиг + масштаб).
+   Такую анимацию видеокарта двигает готовым слоем, без перерисовки — поэтому она плавная. */
+function flowBlob(from, to) {
+  const curr = blobAnim && blobAnim.playState === "running" ? tabBlob.getBoundingClientRect() : null;
+  if (curr) {                                      // если капля ещё летит — стартуем из её текущего положения
+    const box = $(".tabs").getBoundingClientRect();
+    from = { l: curr.left - box.left - $(".tabs").clientLeft, t: curr.top - box.top - $(".tabs").clientTop, w: curr.width, h: curr.height };
+  }
+  blobAnim?.cancel();
+  placeBlob(to);
+  if (reducedMotion) return;
+  const fx = from.l + from.w / 2, fy = from.t + from.h / 2, tx = to.l + to.w / 2, ty = to.t + to.h / 2;
+  const dx = tx - fx, dy = ty - fy, dist = Math.hypot(dx, dy) || 1;
+  const ux = dx / dist, uy = dy / dist;            // направление полёта
+  // В полёте капля вытягивается вдоль движения и сжимается поперёк
+  const stretch = 1 + Math.min(dist / 600, 0.3), squeeze = 1 / stretch;
+  const kick = Math.min(dist * 0.035, 7);          // небольшой проскок за цель перед остановкой
+  const frame = (cx, cy, sx, sy) => `translate(${cx - tx}px, ${cy - ty}px) scale(${sx}, ${sy})`;
+  // У каждого участка своя кривая: разгон → торможение у цели → мягкий возврат после проскока
+  blobAnim = tabBlob.animate([
+    { transform: frame(fx, fy, from.w / to.w, from.h / to.h), easing: "cubic-bezier(.55, 0, .45, 1)" },
+    { transform: frame(fx + dx * 0.5, fy + dy * 0.5,
+        Math.abs(ux) * stretch + Math.abs(uy) * squeeze, Math.abs(uy) * stretch + Math.abs(ux) * squeeze),
+      offset: 0.4, easing: "cubic-bezier(.2, .6, .35, 1)" },
+    { transform: frame(tx + ux * kick, ty + uy * kick, 1 - Math.abs(ux) * 0.03, 1 - Math.abs(uy) * 0.06),
+      offset: 0.75, easing: "cubic-bezier(.4, 0, .4, 1)" },
+    { transform: frame(tx, ty, 1, 1) },
+  ], { duration: 500 });
+}
+
+document.querySelectorAll(".tab").forEach(t => t.onclick = () => {
+  const prev = $(".tab.active");
+  if (prev === t) return;
+  document.querySelectorAll(".tab, form").forEach(x => x.classList.remove("active"));
+  t.classList.add("active");
+  $("#" + t.dataset.tab).classList.add("active");
+  flowBlob(tabRect(prev), tabRect(t));
+});
+
+// Начальное положение и пересчёт при изменении ширины — без анимации
+new ResizeObserver(() => placeBlob(tabRect($(".tab.active")))).observe($(".tabs"));
+
+$('#f-tr [name="from"]').onchange = renderSelects;
+
+const formData = f => Object.fromEntries(new FormData(f).entries());
+
+$("#f-reg").onsubmit = e => { e.preventDefault(); const d = formData(e.target);
+  run(async () => { await register(d.username.trim(), d.nickname.trim(), d.email.trim(), d.password);
+    e.target.reset(); toast(`Игрок ${d.username} зарегистрирован`); }); };
+
+$("#f-item").onsubmit = e => { e.preventDefault(); const d = formData(e.target);
+  run(async () => { if (!d.username) throw new Error("Сначала зарегистрируйте игрока");
+    if (!d.item) throw new Error("Выберите предмет");
+    await addItem(d.username, d.item); toast(`«${d.item}» выдан игроку ${d.username}`); }); };
+
+$("#f-tr").onsubmit = e => { e.preventDefault(); const d = formData(e.target);
+  run(async () => { if (!d.item) throw new Error("Выберите предмет из инвентаря отправителя");
+    await transfer(d.from, d.to, d.item); toast(`«${d.item}» передан: ${d.from} → ${d.to}`); }); };
+
+$("#f-upd").onsubmit = e => { e.preventDefault(); const d = formData(e.target);
+  run(async () => { if (!d.username) throw new Error("Сначала зарегистрируйте игрока");
+    await updateUser(d.username, d.field, d.value.trim()); e.target.value.value = ""; toast("Профиль обновлён"); }); };
+
+// Атака на базу данных: изменение полей карточки игрока
+$("#players").addEventListener("click", e => {
+  const h = e.target.dataset.hack, del = e.target.dataset.del;
+  if (h) { hacking.has(h) ? hacking.delete(h) : hacking.add(h); render(); }
+  if (del && confirm(`Удалить учётную запись ${del} из базы данных?`)) {
+    const gone = recordHash(state.users[del]);
+    delete state.users[del]; hacking.delete(del); save(); render(); toast(`АТАКА: учётная запись ${del} удалена`, true);
+    logEvent("attack", `Учётная запись «${del}» удалена из базы данных в обход блокчейна`,
+             [`SHA-256 удалённой записи: ${gone}`]);
+  }
+});
+$("#players").addEventListener("change", e => {
+  const f = e.target.dataset.field;
+  if (!f) return;
+  const name = e.target.closest(".player").dataset.user, u = state.users[name];
+  let val = e.target.value;
+  if (f === "level" || f === "gold") val = Number.isNaN(parseInt(val, 10)) ? val : parseInt(val, 10);
+  if (f === "items") val = val.split(",").map(s => s.trim()).filter(Boolean);
+  const old = u[f];
+  if (canonical(old) === canonical(val)) return;
+  const hashBefore = recordHash(u);
+  u[f] = val;
+  const hashAfter = recordHash(u);
+  save(); render();
+  toast(`АТАКА: ${name}.${FIELD_NAMES[f]} изменено в базе в обход блокчейна`, true);
+  logEvent("attack", `Изменена учётная запись «${name}» напрямую в базе данных`,
+           [`${FIELD_NAMES[f]}: ${fmt(old)} → ${fmt(val)}`,
+            `SHA-256 записи: ${hashBefore} → ${hashAfter} (${hashDiff(hashBefore, hashAfter).note})`]);
+});
+
+// Атака на историю: изменение блока
+let editing = null;
+$("#chain").addEventListener("click", e => {
+  const el = e.target.closest(".block");
+  if (!el) return;
+  editing = +el.dataset.block;
+  $("#m-idx").textContent = editing;
+  $("#m-data").value = JSON.stringify(state.blockchain[editing].data, null, 2);
+  $("#modal").classList.add("open");
+});
+function applyBlockEdit(rehash) {
+  try {
+    const b = state.blockchain[editing];
+    const before = b.data, oldHash = b.hash;
+    b.data = JSON.parse($("#m-data").value);
+    const changes = diffData(before, b.data);
+    if (rehash) b.hash = blockHash(b);
+    $("#modal").classList.remove("open");
+    if (!changes.length && b.hash === oldHash) return;
+    save(); render();
+    toast(`АТАКА: блок #${editing} изменён${rehash ? " и его хеш пересчитан" : ""}`, true);
+    const contentHash = blockHash(b);
+    changes.push(rehash
+      ? `hash: ${oldHash} → ${b.hash} (пересчитан; ${hashDiff(oldHash, b.hash).note})`
+      : `хеш по содержимому: ${oldHash} → ${contentHash} (${hashDiff(oldHash, contentHash).note}); записанный хеш не изменился`);
+    logEvent("attack", `Изменён блок #${editing} (${b.operation}) в истории` +
+             (rehash ? " с пересчётом хеша" : ", хеш не пересчитан"), changes);
+  } catch (err) { toast("Некорректный JSON: " + err.message, true); }
+}
+$("#m-save").onclick = () => applyBlockEdit(false);
+$("#m-rehash").onclick = () => applyBlockEdit(true);
+$("#m-cancel").onclick = () => $("#modal").classList.remove("open");
+$("#modal").onclick = e => { if (e.target.id === "modal") $("#modal").classList.remove("open"); };
+
+// Анимированная проверка: проходим по блокам по очереди
+$("#btn-verify").onclick = () => run(async () => {
+  const els = [...document.querySelectorAll(".block")];
+  // Сразу, без плавной прокрутки, показываем ленту блоков с первого блока
+  $(".chain-panel").scrollIntoView({ block: "nearest", behavior: "instant" });
+  $("#chain").scrollTo({ left: 0, behavior: "instant" });
+  for (const el of els) {
+    el.classList.add("scan");
+    el.scrollIntoView({ block: "nearest", inline: "center" });
+    await new Promise(r => setTimeout(r, 220));
+    el.classList.remove("scan");
+  }
+  const { problems } = verify(), n = problems.length;
+  render();
+  toast(n ? `Обнаружено нарушений: ${n}` : "Проверка пройдена: данные не изменялись", n > 0);
+  const scope = `блоков: ${state.blockchain.length}, учётных записей: ${Object.keys(state.users).length}`;
+  if (n) logEvent("detect", `Проверка целостности: обнаружено нарушений — ${n} (${scope})`, problems);
+  else logEvent("clean", `Проверка целостности пройдена, нарушений нет (${scope})`);
+});
+
+$("#btn-demo").onclick = () => run(async () => {
+  state = freshState(); hacking.clear(); render();
+  await register("alice", "Alice_Knight", "alice@mail.ru", "qwerty123");
+  await register("bob", "BobTheMage", "bob@mail.ru", "pass456");
+  await addItem("alice", "Меч дракона");
+  await addItem("alice", "Щит паладина");
+  await addItem("alice", "Зелье здоровья");
+  await addItem("alice", "Зелье здоровья");
+  await addItem("bob", "Посох огня");
+  await addItem("bob", "Алмаз");
+  await transfer("alice", "bob", "Щит паладина");
+  await updateUser("bob", "gold", "250");
+  await updateUser("alice", "email", "alice.knight@mail.ru");
+  toast("Демо-данные созданы. Теперь попробуйте что-нибудь взломать!");
+  logEvent("system", `Созданы демо-данные (игроков: 2, блоков: ${state.blockchain.length})`);
+});
+
+/* Откат взлома:
+   1) если есть снимок последнего честного состояния (после последней настоящей операции) — возвращаемся к нему;
+   2) иначе (например, взломанный файл импортирован уже испорченным) — восстанавливаем по блокчейну:
+      цепочка обрезается до последнего корректного блока, а база собирается заново из истории. */
+$("#btn-restore").onclick = () => {
+  const v = verify();
+  if (canonical(state) !== canonical(good)) {
+    state = clone(good); hacking.clear(); save(); render();
+    toast("Состояние восстановлено до атаки");
+    logEvent("restore", "Данные восстановлены из последнего честного состояния" +
+             (v.problems.length ? ` (устранено нарушений: ${v.problems.length})` : ""));
+    return;
+  }
+  if (!v.problems.length) { toast("Откатывать нечего: нарушений нет"); return; }
+  let removed = 0;
+  if (v.firstBad !== null) {
+    const keep = Math.max(v.firstBad, 1);
+    removed = state.blockchain.length - keep;
+    state.blockchain = v.firstBad === 0 ? freshState().blockchain : state.blockchain.slice(0, keep);
+  }
+  state.users = replay(state.blockchain).users;
+  good = clone(state); hacking.clear(); save(); render();
+  toast("База данных восстановлена по блокчейну");
+  logEvent("restore", "База данных восстановлена по блокчейну" +
+           (removed ? ` (отброшено блоков, созданных после взлома: ${removed})` : ""),
+           [`устранено нарушений: ${v.problems.length}`]);
+};
+$("#btn-reset").onclick = () => { if (!confirm("Удалить все данные и начать заново?")) return;
+  state = freshState(); good = clone(state); hacking.clear(); save(); render(); setMining("");
+  logEvent("system", "Все данные сброшены, создан новый genesis-блок"); };
+$("#btn-clear-log").onclick = () => { secLog = []; save(); renderLog(); };
+
+$("#btn-export").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state, null, 2)], { type: "application/json" }));
+  a.download = "gamechain_data.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+};
+$("#btn-import").onclick = () => $("#file").click();
+/* Импорт идёт постепенно: блоки добавляются в ленту по одному, а учётные записи собираются
+   по истории загруженных блоков. В конце в базу встают данные из файла — если файл взломан,
+   нарушение проявится именно в этот момент. Вся загрузка занимает около 2,5 секунды. */
+$("#file").onchange = async e => {
+  const f = e.target.files[0];
+  e.target.value = "";
+  if (!f) return;
+  let raw;
+  try {
+    raw = JSON.parse(await f.text());
+    if (!Array.isArray(raw.blockchain) || !raw.blockchain.length || !raw.users || typeof raw.users !== "object")
+      throw new Error("нет полей users / blockchain");
+  } catch (err) { toast("Не удалось загрузить файл: " + err.message, true); return; }
+
+  run(async () => {
+    const total = raw.blockchain.length, box = $("#import-progress");
+    const delay = reducedMotion ? 0 : Math.max(40, Math.min(150, 2500 / total));
+    box.hidden = false;
+    hacking.clear();
+    for (let k = 1; k <= total; k++) {
+      const chain = raw.blockchain.slice(0, k);
+      let users = {};
+      try { users = replay(chain).users; } catch (err) {}
+      state = { blockchain: chain, users };
+      lastAdded = k - 1;
+      render();
+      box.querySelector(".progress-bar").style.width = (k / total * 100) + "%";
+      box.querySelector(".progress-text").textContent = `Импорт: блок ${k} из ${total}`;
+      setMining(`⏳ Загрузка «${f.name}»…`);
+      if (delay) await new Promise(r => setTimeout(r, delay));
+    }
+    state = raw; good = clone(raw); save(); render();
+    const n = verify().problems.length;
+    box.querySelector(".progress-text").textContent = n ? `Загружено, нарушений: ${n}` : "Загружено ✔";
+    setTimeout(() => { box.hidden = true; }, 1500);
+    setMining(`✔ Импортировано блоков: ${total}`);
+    toast(n ? `Файл загружен, но обнаружены нарушения: ${n}` : `Загружено блоков: ${total}`, n > 0);
+    logEvent("system", `Импортирован файл «${f.name}» (блоков: ${total}, учётных записей: ${Object.keys(raw.users).length})`);
+  });
+};
+
+$("#favicon").href = drawSprite(LOGO, LOGO_COLORS);
+reducedMotion ? drawHero(0) : requestAnimationFrame(heroLoop);
+buildBackground();
+reducedMotion ? drawBackground(0) : requestAnimationFrame(bgLoop);
+$("#item-picker").innerHTML = pickerHtml(ITEMS.map(i => i.name), "");
+$("#item-picked").innerHTML = pickedHtml("", "Выберите предмет из каталога");
+bindPicker("#item-picker", "#item-value", "#item-picked", "Выберите предмет из каталога");
+bindPicker("#tr-picker", "#tr-item", "#tr-picked", "Выберите предмет из инвентаря");
+
+load();
+render();
+renderLog();
+</script>
+</body>
+</html>
